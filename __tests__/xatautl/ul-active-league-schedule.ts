@@ -53,7 +53,7 @@ export async function uploadActiveLeagueSchedule() {
     }
 
     for (let season of [
-        99411, 99410, 94109, 94108, 87366, 87365, 84058, 80139, 75156, 75155, 75154,
+        94109, 94108, 87366, 87365, 84058, 80139, 75156, 75155, 75154,
         65824, 65823, 62504,
     ]) {
         await xata.db.seasons.create({
@@ -114,7 +114,7 @@ export async function uploadActiveLeagueSchedule() {
             fine_tuning_prompt:
                 "Use clear and simple language. Stay away from poetic language and stick to the facts. Focus on the most significant moments and drivers. Start with the race's beginning, move through the middle, and conclude with the end. Highlight key turning points and pivotal moments. Ensure a balanced focus on important drivers and events. Avoid redundant descriptions and repetition. Clearly link events and strategies to their outcomes in the race. Explain the significance of key moments and how they impact the overall narrative. Keep introductory and conclusion paragraphs succinct.",
             id: "rec_cq6ieq7th4sl420j01og",
-            style_name: "Peter Windor",
+            style_name: "Peter Windsor",
             xata: {
                 createdAt: "2024-07-09T12:04:56.788Z",
                 updatedAt: "2024-07-09T12:06:02.277Z",

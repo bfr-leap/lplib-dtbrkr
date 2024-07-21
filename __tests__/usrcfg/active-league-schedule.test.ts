@@ -4,10 +4,8 @@ import { ACTIVE_LEAGUE_SCHEDULE } from './static-active-league-schedule';
 
 describe('active-league-schedule', () => {
     test('Retrieve Active League Schedule from DB', async () => {
-        //await uploadActiveLeagueSchedule();
-        let leagueSchedule = await getActiveLeagueSchedule();
-
-        console.log(leagueSchedule);
+        // await uploadActiveLeagueSchedule();
+        let leagueSchedule = await getActiveLeagueSchedule(true);
 
         expect(leagueSchedule).toEqual(ACTIVE_LEAGUE_SCHEDULE);
     }, 60000);
