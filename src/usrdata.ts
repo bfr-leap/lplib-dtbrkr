@@ -21,6 +21,18 @@ export async function getDefaultLeagueSeason(user_id: string): Promise<any> {
     return page?.records?.[0] || { league_id: 6555, season_id: 99410 };
 }
 
+export async function userFeatures(user_id:string): Promise<any> {
+    const xata: XataClient = getXataClient();
+
+    const ret = await xata.sql`
+    SELECT "display_name"
+    FROM "app_features"
+    INNER JOIN
+    `;
+
+    return ret;
+}
+
 export async function getIrLinkState(user_id: string): Promise<any> {
     console.log('getIrLinkState():', user_id);
     const ret = {
@@ -526,6 +538,9 @@ export async function userDataHandler(
                 q?.season || '',
                 q?.subsession || ''
             );
+            break;
+        case 'userFeatures':
+            doc = await userFeatures(q?.userID || '');
             break;
     }
 
