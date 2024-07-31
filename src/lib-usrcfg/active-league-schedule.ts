@@ -8,20 +8,20 @@ export async function getActiveLeagueSchedule(
     const xata = getXataClient();
 
     const rt: any = await xata.sql`
-    SELECT "sched_subsessions"."id", "seasons"."league_id", "leagues"."name" as "league_name", "car_id", "seasons"."display_name" as "season_name", "time", 
-    "track_id", "sched_subsessions"."season_id", "journalists"."style_name", "journalists"."fine_tuning_prompt",
-    "sched_subsessions"."display_name" as "event_name"
-    FROM "sched_subsessions"
-    INNER JOIN "seasons" ON
-    "sched_subsessions"."season_id"="seasons"."season_id"
-    INNER JOIN "leagues" ON
-     "leagues"."league_id"="seasons"."league_id"
-     INNER JOIN "journalists_leagues" ON
-     "journalists_leagues"."league_id"="seasons"."league_id"
-     INNER JOIN "journalists" ON
-     "journalists_leagues"."journalist_id"="journalists"."id"
-     WHERE "seasons"."is_active"
-     ORDER BY "seasons"."league_id" ASC, "sched_subsessions"."season_id" ASC, "time" ASC`;
+        SELECT "sched_subsessions"."id", "seasons"."league_id", "leagues"."name" as "league_name", "car_id", "seasons"."display_name" as "season_name", "time", 
+        "track_id", "sched_subsessions"."season_id", "journalists"."style_name", "journalists"."fine_tuning_prompt",
+        "sched_subsessions"."display_name" as "event_name"
+        FROM "sched_subsessions"
+        INNER JOIN "seasons" ON
+        "sched_subsessions"."season_id"="seasons"."season_id"
+        INNER JOIN "leagues" ON
+        "leagues"."league_id"="seasons"."league_id"
+        INNER JOIN "journalists_leagues" ON
+        "journalists_leagues"."league_id"="seasons"."league_id"
+        INNER JOIN "journalists" ON
+        "journalists_leagues"."journalist_id"="journalists"."id"
+        WHERE "seasons"."is_active"
+        ORDER BY "seasons"."league_id" ASC, "sched_subsessions"."season_id" ASC, "time" ASC`;
 
     let leaguesM: any = {};
     let seasonsM: any = {};
@@ -57,6 +57,7 @@ export async function getActiveLeagueSchedule(
         }
 
         let event = {
+            event_id: r.id,
             time: r.time,
             track_id: r.track_id,
             comment: r.event_name,
