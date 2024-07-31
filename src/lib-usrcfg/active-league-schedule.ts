@@ -1,6 +1,8 @@
 import { getXataClient, XataClient } from '../xata';
 
-export async function getActiveLeagueSchedule(incJournalist: boolean = false): Promise<any> {
+export async function getActiveLeagueSchedule(
+    incJournalist: boolean = false
+): Promise<any> {
     console.log('getActiveLeagueSchedule():');
 
     const xata = getXataClient();

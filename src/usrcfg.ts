@@ -126,7 +126,7 @@ async function defLgSeasSubCtx_noParams(): Promise<any> {
     const now = new Date().getTime();
     const ret =
         new Date(futRecs.time).getTime() - now <
-            now - new Date(pasRecs.time).getTime()
+        now - new Date(pasRecs.time).getTime()
             ? futRecs
             : pasRecs;
 
@@ -192,7 +192,7 @@ async function defLgSeasSubCtx_forLeague(league: string): Promise<any> {
         const now = new Date().getTime();
         ret =
             new Date(futRecs.time).getTime() - now <
-                now - new Date(pasRecs.time).getTime()
+            now - new Date(pasRecs.time).getTime()
                 ? futRecs
                 : pasRecs;
     }
@@ -263,7 +263,7 @@ async function defLgSeasSubCtx_forSeason(
         const now = new Date().getTime();
         ret =
             new Date(futRecs.time).getTime() - now <
-                now - new Date(pasRecs.time).getTime()
+            now - new Date(pasRecs.time).getTime()
                 ? futRecs
                 : pasRecs;
     }
@@ -355,7 +355,7 @@ async function defLgSeasSubCtx(
         } else {
             ret = await defLgSeasSubCtx_noParams();
         }
-    } catch (e) { }
+    } catch (e) {}
 
     return ret;
 }
