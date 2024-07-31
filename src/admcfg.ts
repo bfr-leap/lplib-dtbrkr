@@ -1,4 +1,5 @@
 import { getXataClient, XataClient } from './xata';
+import { featureMiddleware as fmw } from './feature-middleware';
 
 async function crtSchedEvent(season: string, time: string, track: string) {
     console.log('crtSchedEvent():', season, time, track);
@@ -75,13 +76,19 @@ export async function adminConfigHandler(
 
     switch (q?.type) {
         case 'crtSchedEvent':
-            doc = await crtSchedEvent(q?.season, q?.time, q?.track);
+            doc = await fmw(['league_cdr_admin'], q?.userID, async () => {
+                return await crtSchedEvent(q?.season, q?.time, q?.track);
+            });
             break;
         case 'updSchedEvent':
-            doc = await updSchedEvent(q?.event, q?.time, q?.track);
+            doc = await fmw(['league_cdr_admin'], q?.userID, async () => {
+                return await updSchedEvent(q?.event, q?.time, q?.track);
+            });
             break;
         case 'delSchedEvent':
-            doc = await delSchedEvent(q?.event);
+            doc = await fmw(['league_cdr_admin'], q?.userID, async () => {
+                return await delSchedEvent(q?.event);
+            });
             break;
     }
 

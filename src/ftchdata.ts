@@ -21,8 +21,7 @@ async function passthroughMiddleware(
 export async function getDocument(
     namespace: string,
     query: Query,
-    authMiddleware: Middleware = passthroughMiddleware,
-    adminMiddleware: Middleware = passthroughMiddleware
+    authMiddleware: Middleware = passthroughMiddleware
 ): Promise<any> {
     if ('ldata-usrdata' === namespace) {
         return await authMiddleware(namespace, query, userDataHandler);
