@@ -6,6 +6,6 @@ import { uploadUserFeatures } from './xatautl/ul-user-features';
 
 export default async () => {
     console.log('Initial Setup');
-    await uploadActiveLeagueSchedule();
-    await uploadUserFeatures();
+    // await uploadActiveLeagueSchedule();
+    // await uploadUserFeatures();
 };

@@ -23,18 +23,27 @@ export async function getDocument(
     query: Query,
     authMiddleware: Middleware = passthroughMiddleware
 ): Promise<any> {
+    let startTime = Date.now();
     if ('ldata-usrdata' === namespace) {
+        let endTime = Date.now();
+        console.log(`${namespace}::${query.type} - ${endTime - startTime}`);
         return await authMiddleware(namespace, query, userDataHandler);
     }
 
     if ('ldata-admcfg' === namespace) {
+        let endTime = Date.now();
+        console.log(`${namespace}::${query.type} - ${endTime - startTime}`);
         return await authMiddleware(namespace, query, adminConfigHandler);
     }
 
     if ('ldata-usrcfg' === namespace) {
+        let endTime = Date.now();
+        console.log(`${namespace}::${query.type} - ${endTime - startTime}`);
         return await userConfigHandler(namespace, query);
     }
 
     let ret = await getDataLakeDocument(query);
+    let endTime = Date.now();
+    console.log(`${namespace}::${query.type} - ${endTime - startTime}`);
     return ret;
 }

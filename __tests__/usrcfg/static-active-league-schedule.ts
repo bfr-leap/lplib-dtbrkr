@@ -181,6 +181,16 @@ export const ACTIVE_LEAGUE_SCHEDULE = {
                             track_id: 212,
                             comment: 'Carlos Pace',
                         },
+                        { // let's make sure we have at least on future event
+                            time: '2124-07-26 00:00:00+00',
+                            track_id: 212,
+                            comment: 'Carlos Pace',
+                        },
+                        {
+                            time: '2124-07-30 00:00:00+00',
+                            track_id: 149,
+                            comment: 'Circuit Park Zandvoort',
+                        },
                     ],
                 },
             ],
