@@ -5,6 +5,12 @@ let jsonInput = ACTIVE_LEAGUE_SCHEDULE;
 
 export async function uploadActiveLeagueSchedule() {
     console.log('uploadActiveLeagueSchedule() start');
+    if ('test' !== process.env.XATA_BRANCH) {
+        console.log(`WARNING!! XATA_BRANCH not set to test: [${process.env.XATA_BRANCH}]`);
+        console.log('Aborting data upload');
+        return;
+    }
+
     const xata = getXataClient();
 
     await xata.sql`DELETE FROM "seasons" WHERE 1=1`;

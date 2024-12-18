@@ -3,6 +3,12 @@ import { USER_FEATURES } from '../usrdata/static-user-features';
 
 export async function uploadUserFeatures() {
     console.log('uploadUserFeatures() start');
+    if ('test' !== process.env.XATA_BRANCH) {
+        console.log(`WARNING!! XATA_BRANCH not set to test: [${process.env.XATA_BRANCH}]`);
+        console.log('Aborting data upload');
+        return;
+    }
+
     const xata = getXataClient();
 
     await xata.sql`DELETE FROM "app_features" WHERE 1=1`;
