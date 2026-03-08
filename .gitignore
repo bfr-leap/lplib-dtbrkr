@@ -37,3 +37,6 @@ coverage
 .env
 .xata
 .xatarc
+
+# SQLite database files
+*.sqlite
