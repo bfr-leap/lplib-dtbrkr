@@ -1,12 +1,11 @@
 import { getDocument as getDataLakeDocument } from './dtlkdata';
 import { getActiveLeagueSchedule } from './lib-usrcfg/active-league-schedule';
-import { getXataClient, XataClient } from './xata';
+import { sql } from './db';
 
 async function getLeagueTeamsInfo(league: string): Promise<any> {
     console.log('getLeagueTeamsInfo():', league);
-    const xata = getXataClient();
 
-    const { records } = await xata.sql`
+    const { records } = await sql`
     SELECT "teams"."display_name", "teams"."id" as "team_id", "teams"."season_id", "teams_users"."ir_cust_id"
     FROM "teams"
     INNER JOIN "seasons" ON
@@ -48,13 +47,12 @@ async function getLeagueTeamsInfo(league: string): Promise<any> {
 
 async function getTrackDisplayInfo(): Promise<any> {
     console.log('getTrackDisplayInfo():');
-    const xata = getXataClient();
-    const records = await xata.sql`
-        SELECT "display_name", "short_name", "track_id" 
+    const { records } = await sql`
+        SELECT "display_name", "short_name", "track_id"
         FROM "tracks"`;
 
     const ret: any = {};
-    for (let t of <any>records.records) {
+    for (let t of <any>records) {
         ret[t.track_id] = {
             display: t.display_name,
             short_display: t.short_name,
@@ -71,9 +69,7 @@ async function isValidSeason(season: string): Promise<number> {
         return 0;
     }
 
-    const xata: XataClient = getXataClient();
-
-    const { records } = await xata.sql`
+    const { records } = await sql`
         SELECT "league_id"
         FROM "seasons"
         WHERE "season_id"=${season_id}`;
@@ -87,9 +83,7 @@ async function isValidLeague(league: string): Promise<boolean> {
         return false;
     }
 
-    const xata: XataClient = getXataClient();
-
-    const { records } = await xata.sql`
+    const { records } = await sql`
         SELECT "season_id"
         FROM "seasons"
         WHERE "league_id"=${league_id}`;
@@ -99,25 +93,24 @@ async function isValidLeague(league: string): Promise<boolean> {
 
 async function defLgSeasSubCtx_noParams(): Promise<any> {
     console.log('defLgSeasSubCtx_noParams()');
-    const xata: XataClient = getXataClient();
 
-    const q1 = xata.sql`
-        SELECT "seasons"."league_id", "seasons"."season_id", "time", ("time" - ${new Date()}) as  "delta"
+    const q1 = sql`
+        SELECT "seasons"."league_id", "seasons"."season_id", "time"
         FROM "sched_subsessions"
         INNER JOIN "seasons" ON
         "sched_subsessions"."season_id"="seasons"."season_id"
         WHERE "time" > ${new Date()}
         ORDER BY "time" ASC
-        FETCH FIRST 1 ROW ONLY`;
+        LIMIT 1`;
 
-    const q2 = xata.sql`
-        SELECT "seasons"."league_id", "seasons"."season_id", "time", (${new Date()} - "time") as  "delta"
+    const q2 = sql`
+        SELECT "seasons"."league_id", "seasons"."season_id", "time"
         FROM "sched_subsessions"
         INNER JOIN "seasons" ON
         "sched_subsessions"."season_id"="seasons"."season_id"
         WHERE "time" < ${new Date()}
         ORDER BY "time" DESC
-        FETCH FIRST 1 ROW ONLY`;
+        LIMIT 1`;
 
     let [p1, p2] = await Promise.all([q1, q2]);
     const futRecs: any = p1.records[0];
@@ -152,29 +145,28 @@ async function defLgSeasSubCtx_noParams(): Promise<any> {
 
 async function defLgSeasSubCtx_forLeague(league: string): Promise<any> {
     console.log('defLgSeasSubCtx_forLeague()');
-    const xata: XataClient = getXataClient();
 
     if ((await isValidLeague(league)) === false) {
         return defLgSeasSubCtx_noParams();
     }
 
-    const q1 = xata.sql`
-        SELECT "seasons"."league_id", "seasons"."season_id", "time", ("time" - ${new Date()}) as  "delta"
+    const q1 = sql`
+        SELECT "seasons"."league_id", "seasons"."season_id", "time"
         FROM "sched_subsessions"
         INNER JOIN "seasons" ON
         "sched_subsessions"."season_id"="seasons"."season_id"
         WHERE "time" > ${new Date()} AND "seasons"."league_id"=${league}
         ORDER BY "time" ASC
-        FETCH FIRST 1 ROW ONLY`;
+        LIMIT 1`;
 
-    const q2 = xata.sql`
-        SELECT "seasons"."league_id", "seasons"."season_id", "time", (${new Date()} - "time") as  "delta"
+    const q2 = sql`
+        SELECT "seasons"."league_id", "seasons"."season_id", "time"
         FROM "sched_subsessions"
         INNER JOIN "seasons" ON
         "sched_subsessions"."season_id"="seasons"."season_id"
         WHERE "time" < ${new Date()} AND "seasons"."league_id"=${league}
         ORDER BY "time" DESC
-        FETCH FIRST 1 ROW ONLY`;
+        LIMIT 1`;
 
     let [p1, p2] = await Promise.all([q1, q2]);
     const futRecs: any = p1.records[0];
@@ -227,25 +219,23 @@ async function defLgSeasSubCtx_forSeason(
         return defLgSeasSubCtx_forLeague(league);
     }
 
-    const xata: XataClient = getXataClient();
-
-    const q1 = xata.sql`
-        SELECT "seasons"."league_id", "seasons"."season_id", "time", ("time" - ${new Date()}) as  "delta"
+    const q1 = sql`
+        SELECT "seasons"."league_id", "seasons"."season_id", "time"
         FROM "sched_subsessions"
         INNER JOIN "seasons" ON
         "sched_subsessions"."season_id"="seasons"."season_id"
         WHERE "time" > ${new Date()} AND "seasons"."season_id"=${season}
         ORDER BY "time" ASC
-        FETCH FIRST 1 ROW ONLY`;
+        LIMIT 1`;
 
-    const q2 = xata.sql`
-        SELECT "seasons"."league_id", "seasons"."season_id", "time", (${new Date()} - "time") as  "delta"
+    const q2 = sql`
+        SELECT "seasons"."league_id", "seasons"."season_id", "time"
         FROM "sched_subsessions"
         INNER JOIN "seasons" ON
         "sched_subsessions"."season_id"="seasons"."season_id"
         WHERE "time" < ${new Date()} AND "seasons"."season_id"=${season}
         ORDER BY "time" DESC
-        FETCH FIRST 1 ROW ONLY`;
+        LIMIT 1`;
 
     let [p1, p2] = await Promise.all([q1, q2]);
     const futRecs: any = p1.records[0];

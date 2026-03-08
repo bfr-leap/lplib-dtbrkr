@@ -43,7 +43,7 @@ export async function getHomePageData(query: { [name: string]: string }): Promis
     };
     let leagueSeasonSessions = await getDocument('ldata-irweb', q);
 
-    let past_events = leagueSeasonSessions.sessions?.map((s: any) => {
+    let past_events = leagueSeasonSessions?.sessions?.map((s: any) => {
         return {
             time: s.launch_at,
             subsession_name: `${s.track.track_name} - ${s.cars[0].car_name}`,
@@ -77,7 +77,7 @@ export async function getHomePageData(query: { [name: string]: string }): Promis
         type: 'leagueDriverStats', namespace: 'ldata-rsltsts', league: league_id
     };
     let leagueDriverStats = await getDocument('ldata-rsltsts', q);
-    let top_3_leap_standings: any[] = (Object.keys(leagueDriverStats[season_id]) || [])
+    let top_3_leap_standings: any[] = (Object.keys(leagueDriverStats?.[season_id] || {}) || [])
         .map((cid: any) => leagueDriverStats[season_id][cid]).map((driver: any) => {
             return {
                 driver_id: driver.cust_id,

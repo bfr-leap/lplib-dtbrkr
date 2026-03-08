@@ -1,14 +1,12 @@
-import { getXataClient, XataClient } from '../xata';
+import { sql } from '../db';
 
 export async function getActiveLeagueSchedule(
     incJournalist: boolean = false
 ): Promise<any> {
     console.log('getActiveLeagueSchedule():');
 
-    const xata = getXataClient();
-
-    const rt: any = await xata.sql`
-        SELECT "sched_subsessions"."id", "seasons"."league_id", "leagues"."name" as "league_name", "car_id", "seasons"."display_name" as "season_name", "time", 
+    const rt = await sql`
+        SELECT "sched_subsessions"."id", "seasons"."league_id", "leagues"."name" as "league_name", "car_id", "seasons"."display_name" as "season_name", "time",
         "track_id", "sched_subsessions"."season_id", "journalists"."style_name", "journalists"."fine_tuning_prompt",
         "sched_subsessions"."display_name" as "event_name"
         FROM "sched_subsessions"
@@ -20,7 +18,7 @@ export async function getActiveLeagueSchedule(
         "journalists_leagues"."league_id"="seasons"."league_id"
         INNER JOIN "journalists" ON
         "journalists_leagues"."journalist_id"="journalists"."id"
-        WHERE "seasons"."is_active"
+        WHERE "seasons"."is_active" = 1
         ORDER BY "seasons"."league_id" ASC, "sched_subsessions"."season_id" ASC, "time" ASC`;
 
     let leaguesM: any = {};

@@ -1,5 +1,5 @@
 // Generated with CLI
-import { getXataClient } from '../../src/xata';
+import { getDb, sql, executeInsert } from '../../src/db';
 
 const dt = [
     {
@@ -263,34 +263,33 @@ const dt = [
 export async function uploadLeagueTeamsInfo() {
     console.log('uploadLeagueTeamsInfo() start');
 
-    const xata = getXataClient();
+    const db = getDb();
 
-    await xata.sql`DELETE FROM "teams" WHERE 1=1`;
-    await xata.sql`DELETE FROM "teams_users" WHERE 1=1`;
+    db.exec(`DELETE FROM "teams"`);
+    db.exec(`DELETE FROM "teams_users"`);
 
     for (let league of dt) {
         for (let season of league.seasons) {
             for (let team of season.teams) {
-                let teamR = await xata.db.teams.create({
-                    display_name: team.team_name,
-                    season_id: season.season_id,
-                });
+                const teamId = executeInsert(
+                    `INSERT INTO teams (display_name, season_id) VALUES (?, ?)`,
+                    [team.team_name, season.season_id]
+                );
 
                 for (let cust_id of team.team_members) {
-                    await xata.db.teams_users.create({
-                        team_id: teamR.id,
-                        ir_cust_id: cust_id,
-                    });
+                    await sql`
+                        INSERT INTO teams_users (team_id, ir_cust_id)
+                        VALUES (${teamId}, ${cust_id})`;
                 }
             }
         }
     }
 
-    const page = await xata.db.teams.getAll();
-    console.log(page);
+    const { records: teamsPage } = await sql`SELECT * FROM teams`;
+    console.log(teamsPage);
 
-    const page2 = await xata.db.teams_users.getAll();
-    console.log(page2);
+    const { records: teamUsersPage } = await sql`SELECT * FROM teams_users`;
+    console.log(teamUsersPage);
 
     console.log('uploadLeagueTeamsInfo() done');
 }
