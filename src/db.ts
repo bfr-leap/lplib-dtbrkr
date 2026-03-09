@@ -106,6 +106,30 @@ function initSchema(db: Database.Database): void {
             user_id TEXT,
             feature_id INTEGER
         );
+
+        CREATE TABLE IF NOT EXISTS tracktalk_raw_message_ingest (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            contents TEXT,
+            author_id TEXT,
+            author_username TEXT,
+            author_global_name TEXT,
+            guild_id TEXT,
+            channel_id TEXT,
+            channel_name TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS tracktalk_subscriptions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            channel_id TEXT,
+            league_id INTEGER
+        );
+
+        CREATE TABLE IF NOT EXISTS tracktalk_publications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            channel_id TEXT,
+            subsession_id INTEGER
+        );
     `);
 }
 
