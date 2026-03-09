@@ -1,4 +1,4 @@
-import { getXataClient, XataClient } from './xata';
+import { sql, executeInsert } from './db';
 import { featureMiddleware as fmw } from './feature-middleware';
 
 async function crtSchedEvent(season: string, time: string, track: string) {
@@ -13,16 +13,15 @@ async function crtSchedEvent(season: string, time: string, track: string) {
     console.log(isValidInputs);
 
     if (isValidInputs) {
-        const xata = getXataClient();
-        const ret = await xata.db.sched_subsessions.create({
-            time: timeDate,
-            track_id: trackId,
-            season_id: seasonId,
-            display_name: 'NA',
-        });
+        const timeStr = timeDate!.toISOString();
+        const newId = executeInsert(
+            `INSERT INTO sched_subsessions (time, track_id, season_id, display_name)
+             VALUES (?, ?, ?, 'NA')`,
+            [timeStr, trackId, seasonId]
+        );
 
+        const ret = { id: newId, time: timeStr, track_id: trackId, season_id: seasonId, display_name: 'NA' };
         console.log(ret);
-
         return ret;
     }
 
@@ -39,11 +38,9 @@ async function updSchedEvent(event: string, time: string, track: string) {
 
     if (isValidInputs) {
         try {
-            const xata = getXataClient();
-
-            let r = await xata.sql`
+            let r = await sql`
         UPDATE "sched_subsessions"
-        SET "track_id" = ${trackId.toString()}, "time" = ${timeDate}
+        SET "track_id" = ${trackId}, "time" = ${timeDate}
         WHERE "sched_subsessions"."id"=${event}`;
 
             console.log(r);
@@ -57,9 +54,8 @@ async function updSchedEvent(event: string, time: string, track: string) {
 
 async function delSchedEvent(event: string) {
     console.log('delSchedEvent():', event);
-    const xata = getXataClient();
 
-    await xata.sql`DELETE FROM "sched_subsessions" WHERE "id"=${event}`;
+    await sql`DELETE FROM "sched_subsessions" WHERE "id"=${event}`;
 
     return {};
 }

@@ -1,5 +1,5 @@
 // Generated with CLI
-import { getXataClient } from '../../src/xata';
+import { getDb, sql } from '../../src/db';
 
 let tracks: any = {
     '18': {
@@ -306,20 +306,18 @@ let tracks: any = {
 
 export async function uploadTrackDisplayInfo() {
     console.log('uploadTrackDisplayInfo() start');
-    const xata = getXataClient();
 
-    await xata.sql`DELETE FROM "tracks" WHERE 1=1`;
+    const db = getDb();
+    db.exec(`DELETE FROM "tracks"`);
 
     for (let tId of Object.keys(tracks)) {
         let t = tracks[tId];
-        await xata.db.tracks.create({
-            display_name: t.display,
-            short_name: t.short_display,
-            track_id: Number.parseInt(tId),
-        });
+        await sql`
+            INSERT INTO tracks (display_name, short_name, track_id)
+            VALUES (${t.display}, ${t.short_display}, ${Number.parseInt(tId)})`;
     }
 
-    const page = await xata.db.tracks.getAll();
+    const { records: page } = await sql`SELECT * FROM tracks`;
     console.log(page);
 
     console.log('uploadTrackDisplayInfo() done');

@@ -1,36 +1,34 @@
-import { getXataClient } from '../../src/xata';
+import { getDb, sql, executeInsert } from '../../src/db';
 import { USER_FEATURES } from '../usrdata/static-user-features';
 
 export async function uploadUserFeatures() {
     console.log('uploadUserFeatures() start');
-    if ('test' !== process.env.XATA_BRANCH) {
-        console.log(`WARNING!! XATA_BRANCH not set to test: [${process.env.XATA_BRANCH}]`);
-        console.log('Aborting data upload');
-        return;
-    }
 
-    const xata = getXataClient();
+    const db = getDb();
 
-    await xata.sql`DELETE FROM "app_features" WHERE 1=1`;
-    await xata.sql`DELETE FROM "users_app_features" WHERE 1=1`;
+    db.exec(`DELETE FROM "app_features"`);
+    db.exec(`DELETE FROM "users_app_features"`);
 
-    let featureMap: { [name: string]: string } = {};
+    const featureMap: { [name: string]: number } = {};
 
     for (let appFeature of USER_FEATURES.appFeatures) {
-        let feature = await xata.db.app_features.create({
-            display_name: appFeature.display_name,
-            release_to_all: appFeature.release_to_all,
-            release_to_some: appFeature.release_to_some,
-        });
+        const featureId = executeInsert(
+            `INSERT INTO app_features (display_name, release_to_all, release_to_some)
+             VALUES (?, ?, ?)`,
+            [
+                appFeature.display_name,
+                appFeature.release_to_all ? 1 : 0,
+                appFeature.release_to_some ? 1 : 0,
+            ]
+        );
 
-        featureMap[appFeature.display_name] = feature?.id;
+        featureMap[appFeature.display_name] = featureId;
     }
 
     for (let userAppFeature of USER_FEATURES.usersAppFeatures) {
-        await xata.db.users_app_features.create({
-            user_id: userAppFeature.user_id,
-            feature_id: featureMap[userAppFeature.feature_name],
-        });
+        await sql`
+            INSERT INTO users_app_features (user_id, feature_id)
+            VALUES (${userAppFeature.user_id}, ${featureMap[userAppFeature.feature_name]})`;
     }
 
     console.log('uploadUserFeatures() done');

@@ -24,7 +24,7 @@ export async function getStandingsPageData(query: { [name: string]: string }): P
         type: 'leagueDriverStats', namespace: 'ldata-rsltsts', league: league_id
     };
     let leagueDriverStats = await getDocument('ldata-rsltsts', q);
-    let leap_standings: any[] = (Object.keys(leagueDriverStats[season_id]) || [])
+    let leap_standings: any[] = (Object.keys(leagueDriverStats?.[season_id] || {}) || [])
         .map((cid: any) => leagueDriverStats[season_id][cid]).map((driver: any) => {
             return {
                 driver_id: driver.cust_id,
@@ -37,7 +37,7 @@ export async function getStandingsPageData(query: { [name: string]: string }): P
     };
     let membersData = await getDocument('ldata-irweb', q);
     let membersMap: any = {};
-    for (let member of membersData.members) {
+    for (let member of (membersData?.members || [])) {
         membersMap[member.cust_id] = member;
     }
 
