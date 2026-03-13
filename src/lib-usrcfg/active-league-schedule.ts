@@ -3,7 +3,7 @@ import { sql } from '../db';
 export async function getActiveLeagueSchedule(
     incJournalist: boolean = false
 ): Promise<any> {
-    console.log('getActiveLeagueSchedule():');
+    console.log(':::: getActiveLeagueSchedule():');
 
     const rt = await sql`
         SELECT "sched_subsessions"."id", "seasons"."league_id", "leagues"."name" as "league_name", "car_id", "seasons"."display_name" as "season_name", "time",

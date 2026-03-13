@@ -2,7 +2,7 @@ import { getDocument as getDataLakeDocument } from './dtlkdata';
 import { sql } from './db';
 
 export async function getDefaultLeagueSeason(user_id: string): Promise<any> {
-    console.log('getDefaultLeagueSeason()', user_id);
+    console.log('::: getDefaultLeagueSeason()', user_id);
 
     const { records } = await sql`
     SELECT "seasons"."league_id", "seasons"."season_id"
@@ -19,7 +19,7 @@ export async function getDefaultLeagueSeason(user_id: string): Promise<any> {
 }
 
 export async function userFeatures(user_id: string): Promise<any> {
-    console.log('userFeatures(): ', user_id);
+    console.log('::: userFeatures(): ', user_id);
 
     const { records } = await sql`
     SELECT "display_name", "user_id", "release_to_all"
@@ -34,7 +34,7 @@ export async function userFeatures(user_id: string): Promise<any> {
 }
 
 export async function getIrLinkState(user_id: string): Promise<any> {
-    console.log('getIrLinkState():', user_id);
+    console.log('::: getIrLinkState():', user_id);
     const ret = {
         isVerified: false,
         irCustId: '',
@@ -62,7 +62,7 @@ export async function updIrLinkDriver(
     user_id: string,
     ir_cust_id: string
 ): Promise<any> {
-    console.log('updIrLinkDriver():', user_id);
+    console.log('::: updIrLinkDriver():', user_id);
 
     const { records } = await sql`
         SELECT id, try_count FROM user_ir_cust_mappings
@@ -99,7 +99,7 @@ export async function updIrLinkCode(
     user_id: string,
     verify_code: string
 ): Promise<any> {
-    console.log('updIrLinkCode():', user_id);
+    console.log('::: updIrLinkCode():', user_id);
 
     const { records } = await sql`
         SELECT id, user_id, verify_code, is_verified, try_count
@@ -110,10 +110,10 @@ export async function updIrLinkCode(
     const userLink = records[0] || null;
 
     if (null !== userLink && userLink.verify_code?.toString() === verify_code) {
-        console.log('updIrLinkCode() Success');
+        console.log('::: updIrLinkCode() Success');
         await sql`UPDATE user_ir_cust_mappings SET is_verified = 1 WHERE id = ${userLink.id}`;
     } else {
-        console.log('updIrLinkCode() Fail');
+        console.log('::: updIrLinkCode() Fail');
         const try_count = 1 + (userLink?.try_count || 0);
         if (userLink) {
             await sql`UPDATE user_ir_cust_mappings SET try_count = ${try_count} WHERE id = ${userLink.id}`;
@@ -124,7 +124,7 @@ export async function updIrLinkCode(
 }
 
 async function getUserLeaguesState(user_id: string): Promise<any> {
-    console.log('getUserLeaguesState():', user_id);
+    console.log('::: getUserLeaguesState():', user_id);
     try {
         const { records } = await sql`
         SELECT
@@ -148,7 +148,7 @@ async function updUserLeaguesState(
     user_id: string,
     code: string
 ): Promise<any> {
-    console.log('updUserLeaguesState():', user_id, code);
+    console.log('::: updUserLeaguesState():', user_id, code);
 
     const codes = code.split('-').map((c) => Number.parseInt(c));
 
@@ -192,7 +192,7 @@ async function updUserLeaguesState(
 }
 
 async function isValidSeason(season: string): Promise<number> {
-    console.log('isValidSeason()');
+    console.log(':::: isValidSeason()');
     const season_id = Number.parseInt(season, 10);
     if (isNaN(season_id)) {
         return 0;
@@ -221,7 +221,7 @@ async function isValidLeague(league: string): Promise<boolean> {
 }
 
 async function defLgSeasSubCtx_noParams(userID: string): Promise<any> {
-    console.log('defLgSeasSubCtx_noParams()', `[${userID}]`);
+    console.log(':::: defLgSeasSubCtx_noParams()', `[${userID}]`);
 
     const q1 = sql`
         SELECT "seasons"."league_id", "seasons"."season_id", "time"
@@ -280,7 +280,7 @@ async function defLgSeasSubCtx_forLeague(
     userID: string,
     league: string
 ): Promise<any> {
-    console.log('defLgSeasSubCtx_forLeague()');
+    console.log(':::: defLgSeasSubCtx_forLeague()');
 
     if ((await isValidLeague(league)) === false) {
         return defLgSeasSubCtx_noParams(userID);
@@ -350,7 +350,7 @@ async function defLgSeasSubCtx_forSeason(
     league: string,
     season: string
 ): Promise<any> {
-    console.log('defLgSeasSubCtx_forSeason()');
+    console.log(':::: defLgSeasSubCtx_forSeason()');
 
     if ((await isValidSeason(season)) === 0) {
         return defLgSeasSubCtx_forLeague(userID, league);
@@ -421,7 +421,7 @@ async function defLgSeasSubCtx_forSubsession(
     season: string,
     subsession: string
 ): Promise<any> {
-    console.log('defLgSeasSubCtx_forSubsession()');
+    console.log(':::: defLgSeasSubCtx_forSubsession()');
 
     let subsession_id = Number.parseInt(subsession, 10);
     if (isNaN(subsession_id)) {
@@ -467,7 +467,7 @@ async function defLgSeasSubCtx(
     season: string,
     subsession: string
 ): Promise<any> {
-    console.log('defLgSeasSubCtx()', userID, league);
+    console.log('::: defLgSeasSubCtx()', userID, league);
 
     let ret = { league_id: '', season_id: '' };
     try {
@@ -494,7 +494,7 @@ export async function userDataHandler(
     namespace: string,
     query: any
 ): Promise<any> {
-    console.log('userDataHandler()');
+    console.log(':: userDataHandler()');
 
     const q = query;
 
