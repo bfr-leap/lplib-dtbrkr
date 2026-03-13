@@ -23,6 +23,8 @@ export async function getDocument(
     query: Query,
     authMiddleware: Middleware = passthroughMiddleware
 ): Promise<any> {
+    console.log(': getDocument');
+
     let startTime = Date.now();
     if ('ldata-usrdata' === namespace) {
         let endTime = Date.now();

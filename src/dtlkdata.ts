@@ -19,7 +19,7 @@ export async function getDocument(query: {
         query.custId
     )}.json`;
 
-    console.log(`fetch: ${url}`);
+    console.log(`:: fetch: ${url}`);
 
     try {
         let objs = await fetch(url);

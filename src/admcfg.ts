@@ -2,7 +2,7 @@ import { sql, executeInsert } from './db';
 import { featureMiddleware as fmw } from './feature-middleware';
 
 async function crtSchedEvent(season: string, time: string, track: string) {
-    console.log('crtSchedEvent():', season, time, track);
+    console.log('::: crtSchedEvent():', season, time, track);
     const seasonId = Number.parseInt(season, 10);
     const trackId = Number.parseInt(track, 10);
     const timeNum = Number.parseInt(time, 10);
@@ -29,7 +29,7 @@ async function crtSchedEvent(season: string, time: string, track: string) {
 }
 
 async function updSchedEvent(event: string, time: string, track: string) {
-    console.log('updSchedEvent():', event, time, track);
+    console.log('::: updSchedEvent():', event, time, track);
     const trackId = Number.parseInt(track, 10);
     const timeNum = Number.parseInt(time, 10);
     const timeDate = isNaN(timeNum) ? null : new Date(timeNum);
@@ -53,7 +53,7 @@ async function updSchedEvent(event: string, time: string, track: string) {
 }
 
 async function delSchedEvent(event: string) {
-    console.log('delSchedEvent():', event);
+    console.log('::: delSchedEvent():', event);
 
     await sql`DELETE FROM "sched_subsessions" WHERE "id"=${event}`;
 
@@ -64,7 +64,7 @@ export async function adminConfigHandler(
     namespace: string,
     query: any
 ): Promise<any> {
-    console.log('adminConfigHandler()');
+    console.log(':: adminConfigHandler()');
 
     const q = query;
 
