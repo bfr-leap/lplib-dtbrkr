@@ -3,7 +3,7 @@ import { getActiveLeagueSchedule } from './lib-usrcfg/active-league-schedule';
 import { sql } from './db';
 
 async function getLeagueTeamsInfo(league: string): Promise<any> {
-    console.log('getLeagueTeamsInfo():', league);
+    console.log('::: getLeagueTeamsInfo():', league);
 
     const { records } = await sql`
     SELECT "teams"."display_name", "teams"."id" as "team_id", "teams"."season_id", "teams_users"."ir_cust_id"
@@ -46,7 +46,7 @@ async function getLeagueTeamsInfo(league: string): Promise<any> {
 }
 
 async function getTrackDisplayInfo(): Promise<any> {
-    console.log('getTrackDisplayInfo():');
+    console.log('::: getTrackDisplayInfo():');
     const { records } = await sql`
         SELECT "display_name", "short_name", "track_id"
         FROM "tracks"`;
@@ -63,7 +63,7 @@ async function getTrackDisplayInfo(): Promise<any> {
 }
 
 async function isValidSeason(season: string): Promise<number> {
-    console.log('isValidSeason()');
+    console.log(':::: isValidSeason()');
     const season_id = Number.parseInt(season, 10);
     if (isNaN(season_id)) {
         return 0;
@@ -92,7 +92,7 @@ async function isValidLeague(league: string): Promise<boolean> {
 }
 
 async function defLgSeasSubCtx_noParams(): Promise<any> {
-    console.log('defLgSeasSubCtx_noParams()');
+    console.log(':::: defLgSeasSubCtx_noParams()');
 
     const q1 = sql`
         SELECT "seasons"."league_id", "seasons"."season_id", "time"
@@ -144,7 +144,7 @@ async function defLgSeasSubCtx_noParams(): Promise<any> {
 }
 
 async function defLgSeasSubCtx_forLeague(league: string): Promise<any> {
-    console.log('defLgSeasSubCtx_forLeague()');
+    console.log(':::: defLgSeasSubCtx_forLeague()');
 
     if ((await isValidLeague(league)) === false) {
         return defLgSeasSubCtx_noParams();
@@ -213,7 +213,7 @@ async function defLgSeasSubCtx_forSeason(
     league: string,
     season: string
 ): Promise<any> {
-    console.log('defLgSeasSubCtx_forSeason()');
+    console.log(':::: defLgSeasSubCtx_forSeason()');
 
     if ((await isValidSeason(season)) === 0) {
         return defLgSeasSubCtx_forLeague(league);
@@ -283,7 +283,7 @@ async function defLgSeasSubCtx_forSubsession(
     season: string,
     subsession: string
 ): Promise<any> {
-    console.log('defLgSeasSubCtx_forSubsession()');
+    console.log(':::: defLgSeasSubCtx_forSubsession()');
 
     let subsession_id = Number.parseInt(subsession, 10);
     if (isNaN(subsession_id)) {
@@ -328,7 +328,7 @@ async function defLgSeasSubCtx(
     season: string,
     subsession: string
 ): Promise<any> {
-    console.log('defLgSeasSubCtx()', league);
+    console.log('::: defLgSeasSubCtx()', league);
 
     let ret = { league_id: '', season_id: '' };
     try {
@@ -354,7 +354,7 @@ export async function userConfigHandler(
     namespace: string,
     query: any
 ): Promise<any> {
-    console.log('userConfigHandler()');
+    console.log(':: userConfigHandler()');
 
     const q = query;
     let doc: any = null;
@@ -377,6 +377,8 @@ export async function userConfigHandler(
             );
             break;
     }
+
+    console.log(':: returning document userConfigHandler()', q?.type);
 
     return doc;
 }
