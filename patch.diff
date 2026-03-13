@@ -1,0 +1,2756 @@
+diff --git a/.gitignore b/.gitignore
+index 36fabb6..d948a3f 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -8,6 +8,9 @@
+ .idea/usage.statistics.xml
+ .idea/shelf
+ 
++#db
++*.sqlite
++
+ # deps
+ node_modules/
+ 
+diff --git a/API.md b/API.md
+new file mode 100644
+index 0000000..7d701d3
+--- /dev/null
++++ b/API.md
+@@ -0,0 +1,224 @@
++# Data Broker Read API
++
++All endpoints are mounted under `/api` and return JSON responses.
++
++## User Data Endpoints
++
++### GET /api/user/:userId/default-league-season
++
++Returns the default league and season for a user based on their league interests and upcoming schedule.
++
++**Path Parameters:**
++- `userId` (string) - The user ID
++
++**Response:**
++```json
++{ "league_id": 6555, "season_id": 99410 }
++```
++
++---
++
++### GET /api/user/:userId/features
++
++Returns the list of enabled feature names for a user.
++
++**Path Parameters:**
++- `userId` (string) - The user ID
++
++**Response:**
++```json
++["feature_a", "feature_b"]
++```
++
++---
++
++### GET /api/user/:userId/ir-link-state
++
++Returns the iRacing account link status for a user.
++
++**Path Parameters:**
++- `userId` (string) - The user ID
++
++**Response:**
++```json
++{ "isVerified": true, "irCustId": "12345", "msgSent": false }
++```
++
++---
++
++### GET /api/user/:userId/leagues
++
++Returns the leagues a user has expressed interest in.
++
++**Path Parameters:**
++- `userId` (string) - The user ID
++
++**Response:**
++```json
++[{ "name": "League Name", "league_id": 6555, "short_name": "LN" }]
++```
++
++---
++
++### GET /api/user/:userId/context
++
++Resolves the default league/season/subsession context for a user. Falls back through increasingly broad resolution when specific params are invalid.
++
++**Path Parameters:**
++- `userId` (string) - The user ID
++
++**Query Parameters (all optional):**
++- `league` (string) - League ID to resolve context for
++- `season` (string) - Season ID to resolve context for
++- `subsession` (string) - Subsession ID to resolve context for
++
++**Response:**
++```json
++{ "league_id": 6555, "season_id": 99410, "subsession_id": 12345 }
++```
++
++---
++
++## Config Endpoints
++
++### GET /api/config/leagues/:leagueId/teams
++
++Returns teams and members for all seasons in a league.
++
++**Path Parameters:**
++- `leagueId` (string) - The league ID
++
++**Response:**
++```json
++{
++  "leageu_id": 6555,
++  "seasons": [
++    {
++      "season_id": 99410,
++      "teams": [
++        { "team_name": "Alpha Racing", "team_id": 1, "team_members": [111, 222] }
++      ]
++    }
++  ]
++}
++```
++
++---
++
++### GET /api/config/active-league-schedule
++
++Returns the schedule for all active leagues and their seasons.
++
++**Response:**
++```json
++{
++  "leagues": [
++    {
++      "league_id": 6555,
++      "name": "League Name",
++      "seasons": [
++        {
++          "season_id": 99410,
++          "car_id": 77,
++          "comment": "Season Name",
++          "events": [
++            { "event_id": 1, "time": "2025-03-15T20:00:00Z", "track_id": 123, "comment": "Event Name" }
++          ]
++        }
++      ]
++    }
++  ]
++}
++```
++
++---
++
++### GET /api/config/tracks
++
++Returns display information for all tracks.
++
++**Response:**
++```json
++{
++  "123": { "display": "Daytona International Speedway", "short_display": "Daytona" }
++}
++```
++
++---
++
++### GET /api/config/context
++
++Resolves the default league/season/subsession context (without user-specific league interests).
++
++**Query Parameters (all optional):**
++- `league` (string) - League ID
++- `season` (string) - Season ID
++- `subsession` (string) - Subsession ID
++
++**Response:**
++```json
++{ "league_id": 6555, "season_id": 99410, "subsession_id": 12345 }
++```
++
++---
++
++## Publication Endpoints
++
++### GET /api/publications/:subsessionId/status
++
++Checks whether a subsession has been published.
++
++**Path Parameters:**
++- `subsessionId` (number) - The subsession ID
++
++**Response:**
++```json
++{ "subsession_id": 12345, "published": true }
++```
++
++**Errors:**
++- `400` - Invalid subsession ID (non-numeric)
++
++---
++
++## Channel Endpoints
++
++### GET /api/channels/:channelId/users
++
++Returns a mapping of display names to Discord user mentions for a channel's guild (based on recent message activity).
++
++**Path Parameters:**
++- `channelId` (string) - The Discord channel ID
++
++**Response:**
++```json
++{ "John Doe": "<@123456>", "Jane Smith": "<@789012>" }
++```
++
++---
++
++## Data Lake Endpoints
++
++### GET /api/datalake/:namespace/:type
++
++Fetches a document from the external data lake.
++
++**Path Parameters:**
++- `namespace` (string) - Data namespace (e.g., `ldata-irweb`, `ldata-rsltsts`)
++- `type` (string) - Document type (e.g., `leagueSeasonSessions`, `leagueSeasons`, `membersData`, `leagueDriverStats`, `singleMemberData`)
++
++**Query Parameters (all optional):**
++- `league` - League ID
++- `season` - Season ID
++- `subsession` - Subsession ID
++- `simsession` - Sim session number
++- `driver` - Driver/customer ID
++- `car` - Car ID
++- `track` - Track ID
++- `sessionType` - Session type
++- `custId` - Customer ID
++
++**Response:** The raw JSON document from the data lake.
++
++**Errors:**
++- `404` - Document not found
+diff --git a/package-lock.json b/package-lock.json
+index 4f4bacc..39100e6 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -7,12 +7,16 @@
+       "name": "wbsvc-dtbrkrrd",
+       "dependencies": {
+         "@hono/node-server": "^1.19.11",
++        "better-sqlite3": "^12.6.2",
++        "dotenv": "^17.3.1",
+         "hono": "^4.12.5"
+       },
+       "devDependencies": {
++        "@types/better-sqlite3": "^7.6.13",
+         "@types/node": "^20.11.17",
+         "tsx": "^4.7.1",
+-        "typescript": "^5.8.3"
++        "typescript": "^5.8.3",
++        "vitest": "^4.0.18"
+       }
+     },
+     "node_modules/@esbuild/aix-ppc64": {
+@@ -469,6 +473,405 @@
+         "hono": "^4"
+       }
+     },
++    "node_modules/@jridgewell/sourcemap-codec": {
++      "version": "1.5.5",
++      "resolved": "https://registry.npmjs.org/@jridgewell/sourcemap-codec/-/sourcemap-codec-1.5.5.tgz",
++      "integrity": "sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==",
++      "dev": true,
++      "license": "MIT"
++    },
++    "node_modules/@rollup/rollup-android-arm-eabi": {
++      "version": "4.59.0",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-android-arm-eabi/-/rollup-android-arm-eabi-4.59.0.tgz",
++      "integrity": "sha512-upnNBkA6ZH2VKGcBj9Fyl9IGNPULcjXRlg0LLeaioQWueH30p6IXtJEbKAgvyv+mJaMxSm1l6xwDXYjpEMiLMg==",
++      "cpu": [
++        "arm"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "android"
++      ]
++    },
++    "node_modules/@rollup/rollup-android-arm64": {
++      "version": "4.59.0",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-android-arm64/-/rollup-android-arm64-4.59.0.tgz",
++      "integrity": "sha512-hZ+Zxj3SySm4A/DylsDKZAeVg0mvi++0PYVceVyX7hemkw7OreKdCvW2oQ3T1FMZvCaQXqOTHb8qmBShoqk69Q==",
++      "cpu": [
++        "arm64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "android"
++      ]
++    },
++    "node_modules/@rollup/rollup-darwin-arm64": {
++      "version": "4.59.0",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-darwin-arm64/-/rollup-darwin-arm64-4.59.0.tgz",
++      "integrity": "sha512-W2Psnbh1J8ZJw0xKAd8zdNgF9HRLkdWwwdWqubSVk0pUuQkoHnv7rx4GiF9rT4t5DIZGAsConRE3AxCdJ4m8rg==",
++      "cpu": [
++        "arm64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "darwin"
++      ]
++    },
++    "node_modules/@rollup/rollup-darwin-x64": {
++      "version": "4.59.0",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-darwin-x64/-/rollup-darwin-x64-4.59.0.tgz",
++      "integrity": "sha512-ZW2KkwlS4lwTv7ZVsYDiARfFCnSGhzYPdiOU4IM2fDbL+QGlyAbjgSFuqNRbSthybLbIJ915UtZBtmuLrQAT/w==",
++      "cpu": [
++        "x64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "darwin"
++      ]
++    },
++    "node_modules/@rollup/rollup-freebsd-arm64": {
++      "version": "4.59.0",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-freebsd-arm64/-/rollup-freebsd-arm64-4.59.0.tgz",
++      "integrity": "sha512-EsKaJ5ytAu9jI3lonzn3BgG8iRBjV4LxZexygcQbpiU0wU0ATxhNVEpXKfUa0pS05gTcSDMKpn3Sx+QB9RlTTA==",
++      "cpu": [
++        "arm64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "freebsd"
++      ]
++    },
++    "node_modules/@rollup/rollup-freebsd-x64": {
++      "version": "4.59.0",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-freebsd-x64/-/rollup-freebsd-x64-4.59.0.tgz",
++      "integrity": "sha512-d3DuZi2KzTMjImrxoHIAODUZYoUUMsuUiY4SRRcJy6NJoZ6iIqWnJu9IScV9jXysyGMVuW+KNzZvBLOcpdl3Vg==",
++      "cpu": [
++        "x64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "freebsd"
++      ]
++    },
++    "node_modules/@rollup/rollup-linux-arm-gnueabihf": {
++      "version": "4.59.0",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-arm-gnueabihf/-/rollup-linux-arm-gnueabihf-4.59.0.tgz",
++      "integrity": "sha512-t4ONHboXi/3E0rT6OZl1pKbl2Vgxf9vJfWgmUoCEVQVxhW6Cw/c8I6hbbu7DAvgp82RKiH7TpLwxnJeKv2pbsw==",
++      "cpu": [
++        "arm"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ]
++    },
++    "node_modules/@rollup/rollup-linux-arm-musleabihf": {
++      "version": "4.59.0",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-arm-musleabihf/-/rollup-linux-arm-musleabihf-4.59.0.tgz",
++      "integrity": "sha512-CikFT7aYPA2ufMD086cVORBYGHffBo4K8MQ4uPS/ZnY54GKj36i196u8U+aDVT2LX4eSMbyHtyOh7D7Zvk2VvA==",
++      "cpu": [
++        "arm"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ]
++    },
++    "node_modules/@rollup/rollup-linux-arm64-gnu": {
++      "version": "4.59.0",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-arm64-gnu/-/rollup-linux-arm64-gnu-4.59.0.tgz",
++      "integrity": "sha512-jYgUGk5aLd1nUb1CtQ8E+t5JhLc9x5WdBKew9ZgAXg7DBk0ZHErLHdXM24rfX+bKrFe+Xp5YuJo54I5HFjGDAA==",
++      "cpu": [
++        "arm64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ]
++    },
++    "node_modules/@rollup/rollup-linux-arm64-musl": {
++      "version": "4.59.0",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-arm64-musl/-/rollup-linux-arm64-musl-4.59.0.tgz",
++      "integrity": "sha512-peZRVEdnFWZ5Bh2KeumKG9ty7aCXzzEsHShOZEFiCQlDEepP1dpUl/SrUNXNg13UmZl+gzVDPsiCwnV1uI0RUA==",
++      "cpu": [
++        "arm64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ]
++    },
++    "node_modules/@rollup/rollup-linux-loong64-gnu": {
++      "version": "4.59.0",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-loong64-gnu/-/rollup-linux-loong64-gnu-4.59.0.tgz",
++      "integrity": "sha512-gbUSW/97f7+r4gHy3Jlup8zDG190AuodsWnNiXErp9mT90iCy9NKKU0Xwx5k8VlRAIV2uU9CsMnEFg/xXaOfXg==",
++      "cpu": [
++        "loong64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ]
++    },
++    "node_modules/@rollup/rollup-linux-loong64-musl": {
++      "version": "4.59.0",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-loong64-musl/-/rollup-linux-loong64-musl-4.59.0.tgz",
++      "integrity": "sha512-yTRONe79E+o0FWFijasoTjtzG9EBedFXJMl888NBEDCDV9I2wGbFFfJQQe63OijbFCUZqxpHz1GzpbtSFikJ4Q==",
++      "cpu": [
++        "loong64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ]
++    },
++    "node_modules/@rollup/rollup-linux-ppc64-gnu": {
++      "version": "4.59.0",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-ppc64-gnu/-/rollup-linux-ppc64-gnu-4.59.0.tgz",
++      "integrity": "sha512-sw1o3tfyk12k3OEpRddF68a1unZ5VCN7zoTNtSn2KndUE+ea3m3ROOKRCZxEpmT9nsGnogpFP9x6mnLTCaoLkA==",
++      "cpu": [
++        "ppc64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ]
++    },
++    "node_modules/@rollup/rollup-linux-ppc64-musl": {
++      "version": "4.59.0",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-ppc64-musl/-/rollup-linux-ppc64-musl-4.59.0.tgz",
++      "integrity": "sha512-+2kLtQ4xT3AiIxkzFVFXfsmlZiG5FXYW7ZyIIvGA7Bdeuh9Z0aN4hVyXS/G1E9bTP/vqszNIN/pUKCk/BTHsKA==",
++      "cpu": [
++        "ppc64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ]
++    },
++    "node_modules/@rollup/rollup-linux-riscv64-gnu": {
++      "version": "4.59.0",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-riscv64-gnu/-/rollup-linux-riscv64-gnu-4.59.0.tgz",
++      "integrity": "sha512-NDYMpsXYJJaj+I7UdwIuHHNxXZ/b/N2hR15NyH3m2qAtb/hHPA4g4SuuvrdxetTdndfj9b1WOmy73kcPRoERUg==",
++      "cpu": [
++        "riscv64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ]
++    },
++    "node_modules/@rollup/rollup-linux-riscv64-musl": {
++      "version": "4.59.0",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-riscv64-musl/-/rollup-linux-riscv64-musl-4.59.0.tgz",
++      "integrity": "sha512-nLckB8WOqHIf1bhymk+oHxvM9D3tyPndZH8i8+35p/1YiVoVswPid2yLzgX7ZJP0KQvnkhM4H6QZ5m0LzbyIAg==",
++      "cpu": [
++        "riscv64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ]
++    },
++    "node_modules/@rollup/rollup-linux-s390x-gnu": {
++      "version": "4.59.0",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-s390x-gnu/-/rollup-linux-s390x-gnu-4.59.0.tgz",
++      "integrity": "sha512-oF87Ie3uAIvORFBpwnCvUzdeYUqi2wY6jRFWJAy1qus/udHFYIkplYRW+wo+GRUP4sKzYdmE1Y3+rY5Gc4ZO+w==",
++      "cpu": [
++        "s390x"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ]
++    },
++    "node_modules/@rollup/rollup-linux-x64-gnu": {
++      "version": "4.59.0",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-x64-gnu/-/rollup-linux-x64-gnu-4.59.0.tgz",
++      "integrity": "sha512-3AHmtQq/ppNuUspKAlvA8HtLybkDflkMuLK4DPo77DfthRb71V84/c4MlWJXixZz4uruIH4uaa07IqoAkG64fg==",
++      "cpu": [
++        "x64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ]
++    },
++    "node_modules/@rollup/rollup-linux-x64-musl": {
++      "version": "4.59.0",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-x64-musl/-/rollup-linux-x64-musl-4.59.0.tgz",
++      "integrity": "sha512-2UdiwS/9cTAx7qIUZB/fWtToJwvt0Vbo0zmnYt7ED35KPg13Q0ym1g442THLC7VyI6JfYTP4PiSOWyoMdV2/xg==",
++      "cpu": [
++        "x64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "linux"
++      ]
++    },
++    "node_modules/@rollup/rollup-openbsd-x64": {
++      "version": "4.59.0",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-openbsd-x64/-/rollup-openbsd-x64-4.59.0.tgz",
++      "integrity": "sha512-M3bLRAVk6GOwFlPTIxVBSYKUaqfLrn8l0psKinkCFxl4lQvOSz8ZrKDz2gxcBwHFpci0B6rttydI4IpS4IS/jQ==",
++      "cpu": [
++        "x64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "openbsd"
++      ]
++    },
++    "node_modules/@rollup/rollup-openharmony-arm64": {
++      "version": "4.59.0",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-openharmony-arm64/-/rollup-openharmony-arm64-4.59.0.tgz",
++      "integrity": "sha512-tt9KBJqaqp5i5HUZzoafHZX8b5Q2Fe7UjYERADll83O4fGqJ49O1FsL6LpdzVFQcpwvnyd0i+K/VSwu/o/nWlA==",
++      "cpu": [
++        "arm64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "openharmony"
++      ]
++    },
++    "node_modules/@rollup/rollup-win32-arm64-msvc": {
++      "version": "4.59.0",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-win32-arm64-msvc/-/rollup-win32-arm64-msvc-4.59.0.tgz",
++      "integrity": "sha512-V5B6mG7OrGTwnxaNUzZTDTjDS7F75PO1ae6MJYdiMu60sq0CqN5CVeVsbhPxalupvTX8gXVSU9gq+Rx1/hvu6A==",
++      "cpu": [
++        "arm64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "win32"
++      ]
++    },
++    "node_modules/@rollup/rollup-win32-ia32-msvc": {
++      "version": "4.59.0",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-win32-ia32-msvc/-/rollup-win32-ia32-msvc-4.59.0.tgz",
++      "integrity": "sha512-UKFMHPuM9R0iBegwzKF4y0C4J9u8C6MEJgFuXTBerMk7EJ92GFVFYBfOZaSGLu6COf7FxpQNqhNS4c4icUPqxA==",
++      "cpu": [
++        "ia32"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "win32"
++      ]
++    },
++    "node_modules/@rollup/rollup-win32-x64-gnu": {
++      "version": "4.59.0",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-win32-x64-gnu/-/rollup-win32-x64-gnu-4.59.0.tgz",
++      "integrity": "sha512-laBkYlSS1n2L8fSo1thDNGrCTQMmxjYY5G0WFWjFFYZkKPjsMBsgJfGf4TLxXrF6RyhI60L8TMOjBMvXiTcxeA==",
++      "cpu": [
++        "x64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "win32"
++      ]
++    },
++    "node_modules/@rollup/rollup-win32-x64-msvc": {
++      "version": "4.59.0",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-win32-x64-msvc/-/rollup-win32-x64-msvc-4.59.0.tgz",
++      "integrity": "sha512-2HRCml6OztYXyJXAvdDXPKcawukWY2GpR5/nxKp4iBgiO3wcoEGkAaqctIbZcNB6KlUQBIqt8VYkNSj2397EfA==",
++      "cpu": [
++        "x64"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "win32"
++      ]
++    },
++    "node_modules/@standard-schema/spec": {
++      "version": "1.1.0",
++      "resolved": "https://registry.npmjs.org/@standard-schema/spec/-/spec-1.1.0.tgz",
++      "integrity": "sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==",
++      "dev": true,
++      "license": "MIT"
++    },
++    "node_modules/@types/better-sqlite3": {
++      "version": "7.6.13",
++      "resolved": "https://registry.npmjs.org/@types/better-sqlite3/-/better-sqlite3-7.6.13.tgz",
++      "integrity": "sha512-NMv9ASNARoKksWtsq/SHakpYAYnhBrQgGD8zkLYk/jaK8jUGn08CfEdTRgYhMypUQAfzSP8W6gNLe0q19/t4VA==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@types/node": "*"
++      }
++    },
++    "node_modules/@types/chai": {
++      "version": "5.2.3",
++      "resolved": "https://registry.npmjs.org/@types/chai/-/chai-5.2.3.tgz",
++      "integrity": "sha512-Mw558oeA9fFbv65/y4mHtXDs9bPnFMZAL/jxdPFUpOHHIXX91mcgEHbS5Lahr+pwZFR8A7GQleRWeI6cGFC2UA==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@types/deep-eql": "*",
++        "assertion-error": "^2.0.1"
++      }
++    },
++    "node_modules/@types/deep-eql": {
++      "version": "4.0.2",
++      "resolved": "https://registry.npmjs.org/@types/deep-eql/-/deep-eql-4.0.2.tgz",
++      "integrity": "sha512-c9h9dVVMigMPc4bwTvC5dxqtqJZwQPePsWjPlpSOnojbor6pGqdk541lfA7AqFQr5pB1BRdq0juY9db81BwyFw==",
++      "dev": true,
++      "license": "MIT"
++    },
++    "node_modules/@types/estree": {
++      "version": "1.0.8",
++      "resolved": "https://registry.npmjs.org/@types/estree/-/estree-1.0.8.tgz",
++      "integrity": "sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==",
++      "dev": true,
++      "license": "MIT"
++    },
+     "node_modules/@types/node": {
+       "version": "20.19.37",
+       "resolved": "https://registry.npmjs.org/@types/node/-/node-20.19.37.tgz",
+@@ -476,9 +879,285 @@
+       "dev": true,
+       "license": "MIT",
+       "dependencies": {
+-        "undici-types": "~6.21.0"
++        "undici-types": "~6.21.0"
++      }
++    },
++    "node_modules/@vitest/expect": {
++      "version": "4.0.18",
++      "resolved": "https://registry.npmjs.org/@vitest/expect/-/expect-4.0.18.tgz",
++      "integrity": "sha512-8sCWUyckXXYvx4opfzVY03EOiYVxyNrHS5QxX3DAIi5dpJAAkyJezHCP77VMX4HKA2LDT/Jpfo8i2r5BE3GnQQ==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@standard-schema/spec": "^1.0.0",
++        "@types/chai": "^5.2.2",
++        "@vitest/spy": "4.0.18",
++        "@vitest/utils": "4.0.18",
++        "chai": "^6.2.1",
++        "tinyrainbow": "^3.0.3"
++      },
++      "funding": {
++        "url": "https://opencollective.com/vitest"
++      }
++    },
++    "node_modules/@vitest/mocker": {
++      "version": "4.0.18",
++      "resolved": "https://registry.npmjs.org/@vitest/mocker/-/mocker-4.0.18.tgz",
++      "integrity": "sha512-HhVd0MDnzzsgevnOWCBj5Otnzobjy5wLBe4EdeeFGv8luMsGcYqDuFRMcttKWZA5vVO8RFjexVovXvAM4JoJDQ==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@vitest/spy": "4.0.18",
++        "estree-walker": "^3.0.3",
++        "magic-string": "^0.30.21"
++      },
++      "funding": {
++        "url": "https://opencollective.com/vitest"
++      },
++      "peerDependencies": {
++        "msw": "^2.4.9",
++        "vite": "^6.0.0 || ^7.0.0-0"
++      },
++      "peerDependenciesMeta": {
++        "msw": {
++          "optional": true
++        },
++        "vite": {
++          "optional": true
++        }
++      }
++    },
++    "node_modules/@vitest/pretty-format": {
++      "version": "4.0.18",
++      "resolved": "https://registry.npmjs.org/@vitest/pretty-format/-/pretty-format-4.0.18.tgz",
++      "integrity": "sha512-P24GK3GulZWC5tz87ux0m8OADrQIUVDPIjjj65vBXYG17ZeU3qD7r+MNZ1RNv4l8CGU2vtTRqixrOi9fYk/yKw==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "tinyrainbow": "^3.0.3"
++      },
++      "funding": {
++        "url": "https://opencollective.com/vitest"
++      }
++    },
++    "node_modules/@vitest/runner": {
++      "version": "4.0.18",
++      "resolved": "https://registry.npmjs.org/@vitest/runner/-/runner-4.0.18.tgz",
++      "integrity": "sha512-rpk9y12PGa22Jg6g5M3UVVnTS7+zycIGk9ZNGN+m6tZHKQb7jrP7/77WfZy13Y/EUDd52NDsLRQhYKtv7XfPQw==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@vitest/utils": "4.0.18",
++        "pathe": "^2.0.3"
++      },
++      "funding": {
++        "url": "https://opencollective.com/vitest"
++      }
++    },
++    "node_modules/@vitest/snapshot": {
++      "version": "4.0.18",
++      "resolved": "https://registry.npmjs.org/@vitest/snapshot/-/snapshot-4.0.18.tgz",
++      "integrity": "sha512-PCiV0rcl7jKQjbgYqjtakly6T1uwv/5BQ9SwBLekVg/EaYeQFPiXcgrC2Y7vDMA8dM1SUEAEV82kgSQIlXNMvA==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@vitest/pretty-format": "4.0.18",
++        "magic-string": "^0.30.21",
++        "pathe": "^2.0.3"
++      },
++      "funding": {
++        "url": "https://opencollective.com/vitest"
++      }
++    },
++    "node_modules/@vitest/spy": {
++      "version": "4.0.18",
++      "resolved": "https://registry.npmjs.org/@vitest/spy/-/spy-4.0.18.tgz",
++      "integrity": "sha512-cbQt3PTSD7P2OARdVW3qWER5EGq7PHlvE+QfzSC0lbwO+xnt7+XH06ZzFjFRgzUX//JmpxrCu92VdwvEPlWSNw==",
++      "dev": true,
++      "license": "MIT",
++      "funding": {
++        "url": "https://opencollective.com/vitest"
++      }
++    },
++    "node_modules/@vitest/utils": {
++      "version": "4.0.18",
++      "resolved": "https://registry.npmjs.org/@vitest/utils/-/utils-4.0.18.tgz",
++      "integrity": "sha512-msMRKLMVLWygpK3u2Hybgi4MNjcYJvwTb0Ru09+fOyCXIgT5raYP041DRRdiJiI3k/2U6SEbAETB3YtBrUkCFA==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@vitest/pretty-format": "4.0.18",
++        "tinyrainbow": "^3.0.3"
++      },
++      "funding": {
++        "url": "https://opencollective.com/vitest"
++      }
++    },
++    "node_modules/assertion-error": {
++      "version": "2.0.1",
++      "resolved": "https://registry.npmjs.org/assertion-error/-/assertion-error-2.0.1.tgz",
++      "integrity": "sha512-Izi8RQcffqCeNVgFigKli1ssklIbpHnCYc6AknXGYoB6grJqyeby7jv12JUQgmTAnIDnbck1uxksT4dzN3PWBA==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/base64-js": {
++      "version": "1.5.1",
++      "resolved": "https://registry.npmjs.org/base64-js/-/base64-js-1.5.1.tgz",
++      "integrity": "sha512-AKpaYlHn8t4SVbOHCy+b5+KKgvR4vrsD8vbvrbiQJps7fKDTkjkDry6ji0rUJjC0kzbNePLwzxq8iypo41qeWA==",
++      "funding": [
++        {
++          "type": "github",
++          "url": "https://github.com/sponsors/feross"
++        },
++        {
++          "type": "patreon",
++          "url": "https://www.patreon.com/feross"
++        },
++        {
++          "type": "consulting",
++          "url": "https://feross.org/support"
++        }
++      ],
++      "license": "MIT"
++    },
++    "node_modules/better-sqlite3": {
++      "version": "12.6.2",
++      "resolved": "https://registry.npmjs.org/better-sqlite3/-/better-sqlite3-12.6.2.tgz",
++      "integrity": "sha512-8VYKM3MjCa9WcaSAI3hzwhmyHVlH8tiGFwf0RlTsZPWJ1I5MkzjiudCo4KC4DxOaL/53A5B1sI/IbldNFDbsKA==",
++      "hasInstallScript": true,
++      "license": "MIT",
++      "dependencies": {
++        "bindings": "^1.5.0",
++        "prebuild-install": "^7.1.1"
++      },
++      "engines": {
++        "node": "20.x || 22.x || 23.x || 24.x || 25.x"
++      }
++    },
++    "node_modules/bindings": {
++      "version": "1.5.0",
++      "resolved": "https://registry.npmjs.org/bindings/-/bindings-1.5.0.tgz",
++      "integrity": "sha512-p2q/t/mhvuOj/UeLlV6566GD/guowlr0hHxClI0W9m7MWYkL1F0hLo+0Aexs9HSPCtR1SXQ0TD3MMKrXZajbiQ==",
++      "license": "MIT",
++      "dependencies": {
++        "file-uri-to-path": "1.0.0"
++      }
++    },
++    "node_modules/bl": {
++      "version": "4.1.0",
++      "resolved": "https://registry.npmjs.org/bl/-/bl-4.1.0.tgz",
++      "integrity": "sha512-1W07cM9gS6DcLperZfFSj+bWLtaPGSOHWhPiGzXmvVJbRLdG82sH/Kn8EtW1VqWVA54AKf2h5k5BbnIbwF3h6w==",
++      "license": "MIT",
++      "dependencies": {
++        "buffer": "^5.5.0",
++        "inherits": "^2.0.4",
++        "readable-stream": "^3.4.0"
++      }
++    },
++    "node_modules/buffer": {
++      "version": "5.7.1",
++      "resolved": "https://registry.npmjs.org/buffer/-/buffer-5.7.1.tgz",
++      "integrity": "sha512-EHcyIPBQ4BSGlvjB16k5KgAJ27CIsHY/2JBmCRReo48y9rQ3MaUzWX3KVlBa4U7MyX02HdVj0K7C3WaB3ju7FQ==",
++      "funding": [
++        {
++          "type": "github",
++          "url": "https://github.com/sponsors/feross"
++        },
++        {
++          "type": "patreon",
++          "url": "https://www.patreon.com/feross"
++        },
++        {
++          "type": "consulting",
++          "url": "https://feross.org/support"
++        }
++      ],
++      "license": "MIT",
++      "dependencies": {
++        "base64-js": "^1.3.1",
++        "ieee754": "^1.1.13"
++      }
++    },
++    "node_modules/chai": {
++      "version": "6.2.2",
++      "resolved": "https://registry.npmjs.org/chai/-/chai-6.2.2.tgz",
++      "integrity": "sha512-NUPRluOfOiTKBKvWPtSD4PhFvWCqOi0BGStNWs57X9js7XGTprSmFoz5F0tWhR4WPjNeR9jXqdC7/UpSJTnlRg==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=18"
++      }
++    },
++    "node_modules/chownr": {
++      "version": "1.1.4",
++      "resolved": "https://registry.npmjs.org/chownr/-/chownr-1.1.4.tgz",
++      "integrity": "sha512-jJ0bqzaylmJtVnNgzTeSOs8DPavpbYgEr/b0YL8/2GO3xJEhInFmhKMUnEJQjZumK7KXGFhUy89PrsJWlakBVg==",
++      "license": "ISC"
++    },
++    "node_modules/decompress-response": {
++      "version": "6.0.0",
++      "resolved": "https://registry.npmjs.org/decompress-response/-/decompress-response-6.0.0.tgz",
++      "integrity": "sha512-aW35yZM6Bb/4oJlZncMH2LCoZtJXTRxES17vE3hoRiowU2kWHaJKFkSBDnDR+cm9J+9QhXmREyIfv0pji9ejCQ==",
++      "license": "MIT",
++      "dependencies": {
++        "mimic-response": "^3.1.0"
++      },
++      "engines": {
++        "node": ">=10"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/sindresorhus"
++      }
++    },
++    "node_modules/deep-extend": {
++      "version": "0.6.0",
++      "resolved": "https://registry.npmjs.org/deep-extend/-/deep-extend-0.6.0.tgz",
++      "integrity": "sha512-LOHxIOaPYdHlJRtCQfDIVZtfw/ufM8+rVj649RIHzcm/vGwQRXFt6OPqIFWsm2XEMrNIEtWR64sY1LEKD2vAOA==",
++      "license": "MIT",
++      "engines": {
++        "node": ">=4.0.0"
++      }
++    },
++    "node_modules/detect-libc": {
++      "version": "2.1.2",
++      "resolved": "https://registry.npmjs.org/detect-libc/-/detect-libc-2.1.2.tgz",
++      "integrity": "sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==",
++      "license": "Apache-2.0",
++      "engines": {
++        "node": ">=8"
++      }
++    },
++    "node_modules/dotenv": {
++      "version": "17.3.1",
++      "resolved": "https://registry.npmjs.org/dotenv/-/dotenv-17.3.1.tgz",
++      "integrity": "sha512-IO8C/dzEb6O3F9/twg6ZLXz164a2fhTnEWb95H23Dm4OuN+92NmEAlTrupP9VW6Jm3sO26tQlqyvyi4CsnY9GA==",
++      "license": "BSD-2-Clause",
++      "engines": {
++        "node": ">=12"
++      },
++      "funding": {
++        "url": "https://dotenvx.com"
++      }
++    },
++    "node_modules/end-of-stream": {
++      "version": "1.4.5",
++      "resolved": "https://registry.npmjs.org/end-of-stream/-/end-of-stream-1.4.5.tgz",
++      "integrity": "sha512-ooEGc6HP26xXq/N+GCGOT0JKCLDGrq2bQUZrQ7gyrJiZANJ/8YDTxTpQBXGMn+WbIQXNVpyWymm7KYVICQnyOg==",
++      "license": "MIT",
++      "dependencies": {
++        "once": "^1.4.0"
+       }
+     },
++    "node_modules/es-module-lexer": {
++      "version": "1.7.0",
++      "resolved": "https://registry.npmjs.org/es-module-lexer/-/es-module-lexer-1.7.0.tgz",
++      "integrity": "sha512-jEQoCwk8hyb2AZziIOLhDqpm5+2ww5uIE6lkO/6jcOCusfk6LhMHpXXfBLXTZ7Ydyt0j4VoUQv6uGNYbdW+kBA==",
++      "dev": true,
++      "license": "MIT"
++    },
+     "node_modules/esbuild": {
+       "version": "0.27.3",
+       "resolved": "https://registry.npmjs.org/esbuild/-/esbuild-0.27.3.tgz",
+@@ -521,6 +1200,65 @@
+         "@esbuild/win32-x64": "0.27.3"
+       }
+     },
++    "node_modules/estree-walker": {
++      "version": "3.0.3",
++      "resolved": "https://registry.npmjs.org/estree-walker/-/estree-walker-3.0.3.tgz",
++      "integrity": "sha512-7RUKfXgSMMkzt6ZuXmqapOurLGPPfgj6l9uRZ7lRGolvk0y2yocc35LdcxKC5PQZdn2DMqioAQ2NoWcrTKmm6g==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@types/estree": "^1.0.0"
++      }
++    },
++    "node_modules/expand-template": {
++      "version": "2.0.3",
++      "resolved": "https://registry.npmjs.org/expand-template/-/expand-template-2.0.3.tgz",
++      "integrity": "sha512-XYfuKMvj4O35f/pOXLObndIRvyQ+/+6AhODh+OKWj9S9498pHHn/IMszH+gt0fBCRWMNfk1ZSp5x3AifmnI2vg==",
++      "license": "(MIT OR WTFPL)",
++      "engines": {
++        "node": ">=6"
++      }
++    },
++    "node_modules/expect-type": {
++      "version": "1.3.0",
++      "resolved": "https://registry.npmjs.org/expect-type/-/expect-type-1.3.0.tgz",
++      "integrity": "sha512-knvyeauYhqjOYvQ66MznSMs83wmHrCycNEN6Ao+2AeYEfxUIkuiVxdEa1qlGEPK+We3n0THiDciYSsCcgW/DoA==",
++      "dev": true,
++      "license": "Apache-2.0",
++      "engines": {
++        "node": ">=12.0.0"
++      }
++    },
++    "node_modules/fdir": {
++      "version": "6.5.0",
++      "resolved": "https://registry.npmjs.org/fdir/-/fdir-6.5.0.tgz",
++      "integrity": "sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=12.0.0"
++      },
++      "peerDependencies": {
++        "picomatch": "^3 || ^4"
++      },
++      "peerDependenciesMeta": {
++        "picomatch": {
++          "optional": true
++        }
++      }
++    },
++    "node_modules/file-uri-to-path": {
++      "version": "1.0.0",
++      "resolved": "https://registry.npmjs.org/file-uri-to-path/-/file-uri-to-path-1.0.0.tgz",
++      "integrity": "sha512-0Zt+s3L7Vf1biwWZ29aARiVYLx7iMGnEUl9x33fbB/j3jR81u/O2LbqK+Bm1CDSNDKVtJ/YjwY7TUd5SkeLQLw==",
++      "license": "MIT"
++    },
++    "node_modules/fs-constants": {
++      "version": "1.0.0",
++      "resolved": "https://registry.npmjs.org/fs-constants/-/fs-constants-1.0.0.tgz",
++      "integrity": "sha512-y6OAwoSIf7FyjMIv94u+b5rdheZEjzR63GTyZJm5qh4Bi+2YgwLCcI/fPFZkL5PSixOt6ZNKm+w+Hfp/Bciwow==",
++      "license": "MIT"
++    },
+     "node_modules/fsevents": {
+       "version": "2.3.3",
+       "resolved": "https://registry.npmjs.org/fsevents/-/fsevents-2.3.3.tgz",
+@@ -549,6 +1287,12 @@
+         "url": "https://github.com/privatenumber/get-tsconfig?sponsor=1"
+       }
+     },
++    "node_modules/github-from-package": {
++      "version": "0.0.0",
++      "resolved": "https://registry.npmjs.org/github-from-package/-/github-from-package-0.0.0.tgz",
++      "integrity": "sha512-SyHy3T1v2NUXn29OsWdxmK6RwHD+vkj3v8en8AOBZ1wBQ/hCAQ5bAQTD02kW4W9tUp/3Qh6J8r9EvntiyCmOOw==",
++      "license": "MIT"
++    },
+     "node_modules/hono": {
+       "version": "4.12.5",
+       "resolved": "https://registry.npmjs.org/hono/-/hono-4.12.5.tgz",
+@@ -558,6 +1302,254 @@
+         "node": ">=16.9.0"
+       }
+     },
++    "node_modules/ieee754": {
++      "version": "1.2.1",
++      "resolved": "https://registry.npmjs.org/ieee754/-/ieee754-1.2.1.tgz",
++      "integrity": "sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA==",
++      "funding": [
++        {
++          "type": "github",
++          "url": "https://github.com/sponsors/feross"
++        },
++        {
++          "type": "patreon",
++          "url": "https://www.patreon.com/feross"
++        },
++        {
++          "type": "consulting",
++          "url": "https://feross.org/support"
++        }
++      ],
++      "license": "BSD-3-Clause"
++    },
++    "node_modules/inherits": {
++      "version": "2.0.4",
++      "resolved": "https://registry.npmjs.org/inherits/-/inherits-2.0.4.tgz",
++      "integrity": "sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==",
++      "license": "ISC"
++    },
++    "node_modules/ini": {
++      "version": "1.3.8",
++      "resolved": "https://registry.npmjs.org/ini/-/ini-1.3.8.tgz",
++      "integrity": "sha512-JV/yugV2uzW5iMRSiZAyDtQd+nxtUnjeLt0acNdw98kKLrvuRVyB80tsREOE7yvGVgalhZ6RNXCmEHkUKBKxew==",
++      "license": "ISC"
++    },
++    "node_modules/magic-string": {
++      "version": "0.30.21",
++      "resolved": "https://registry.npmjs.org/magic-string/-/magic-string-0.30.21.tgz",
++      "integrity": "sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@jridgewell/sourcemap-codec": "^1.5.5"
++      }
++    },
++    "node_modules/mimic-response": {
++      "version": "3.1.0",
++      "resolved": "https://registry.npmjs.org/mimic-response/-/mimic-response-3.1.0.tgz",
++      "integrity": "sha512-z0yWI+4FDrrweS8Zmt4Ej5HdJmky15+L2e6Wgn3+iK5fWzb6T3fhNFq2+MeTRb064c6Wr4N/wv0DzQTjNzHNGQ==",
++      "license": "MIT",
++      "engines": {
++        "node": ">=10"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/sindresorhus"
++      }
++    },
++    "node_modules/minimist": {
++      "version": "1.2.8",
++      "resolved": "https://registry.npmjs.org/minimist/-/minimist-1.2.8.tgz",
++      "integrity": "sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==",
++      "license": "MIT",
++      "funding": {
++        "url": "https://github.com/sponsors/ljharb"
++      }
++    },
++    "node_modules/mkdirp-classic": {
++      "version": "0.5.3",
++      "resolved": "https://registry.npmjs.org/mkdirp-classic/-/mkdirp-classic-0.5.3.tgz",
++      "integrity": "sha512-gKLcREMhtuZRwRAfqP3RFW+TK4JqApVBtOIftVgjuABpAtpxhPGaDcfvbhNvD0B8iD1oUr/txX35NjcaY6Ns/A==",
++      "license": "MIT"
++    },
++    "node_modules/nanoid": {
++      "version": "3.3.11",
++      "resolved": "https://registry.npmjs.org/nanoid/-/nanoid-3.3.11.tgz",
++      "integrity": "sha512-N8SpfPUnUp1bK+PMYW8qSWdl9U+wwNWI4QKxOYDy9JAro3WMX7p2OeVRF9v+347pnakNevPmiHhNmZ2HbFA76w==",
++      "dev": true,
++      "funding": [
++        {
++          "type": "github",
++          "url": "https://github.com/sponsors/ai"
++        }
++      ],
++      "license": "MIT",
++      "bin": {
++        "nanoid": "bin/nanoid.cjs"
++      },
++      "engines": {
++        "node": "^10 || ^12 || ^13.7 || ^14 || >=15.0.1"
++      }
++    },
++    "node_modules/napi-build-utils": {
++      "version": "2.0.0",
++      "resolved": "https://registry.npmjs.org/napi-build-utils/-/napi-build-utils-2.0.0.tgz",
++      "integrity": "sha512-GEbrYkbfF7MoNaoh2iGG84Mnf/WZfB0GdGEsM8wz7Expx/LlWf5U8t9nvJKXSp3qr5IsEbK04cBGhol/KwOsWA==",
++      "license": "MIT"
++    },
++    "node_modules/node-abi": {
++      "version": "3.87.0",
++      "resolved": "https://registry.npmjs.org/node-abi/-/node-abi-3.87.0.tgz",
++      "integrity": "sha512-+CGM1L1CgmtheLcBuleyYOn7NWPVu0s0EJH2C4puxgEZb9h8QpR9G2dBfZJOAUhi7VQxuBPMd0hiISWcTyiYyQ==",
++      "license": "MIT",
++      "dependencies": {
++        "semver": "^7.3.5"
++      },
++      "engines": {
++        "node": ">=10"
++      }
++    },
++    "node_modules/obug": {
++      "version": "2.1.1",
++      "resolved": "https://registry.npmjs.org/obug/-/obug-2.1.1.tgz",
++      "integrity": "sha512-uTqF9MuPraAQ+IsnPf366RG4cP9RtUi7MLO1N3KEc+wb0a6yKpeL0lmk2IB1jY5KHPAlTc6T/JRdC/YqxHNwkQ==",
++      "dev": true,
++      "funding": [
++        "https://github.com/sponsors/sxzz",
++        "https://opencollective.com/debug"
++      ],
++      "license": "MIT"
++    },
++    "node_modules/once": {
++      "version": "1.4.0",
++      "resolved": "https://registry.npmjs.org/once/-/once-1.4.0.tgz",
++      "integrity": "sha512-lNaJgI+2Q5URQBkccEKHTQOPaXdUxnZZElQTZY0MFUAuaEqe1E+Nyvgdz/aIyNi6Z9MzO5dv1H8n58/GELp3+w==",
++      "license": "ISC",
++      "dependencies": {
++        "wrappy": "1"
++      }
++    },
++    "node_modules/pathe": {
++      "version": "2.0.3",
++      "resolved": "https://registry.npmjs.org/pathe/-/pathe-2.0.3.tgz",
++      "integrity": "sha512-WUjGcAqP1gQacoQe+OBJsFA7Ld4DyXuUIjZ5cc75cLHvJ7dtNsTugphxIADwspS+AraAUePCKrSVtPLFj/F88w==",
++      "dev": true,
++      "license": "MIT"
++    },
++    "node_modules/picocolors": {
++      "version": "1.1.1",
++      "resolved": "https://registry.npmjs.org/picocolors/-/picocolors-1.1.1.tgz",
++      "integrity": "sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==",
++      "dev": true,
++      "license": "ISC"
++    },
++    "node_modules/picomatch": {
++      "version": "4.0.3",
++      "resolved": "https://registry.npmjs.org/picomatch/-/picomatch-4.0.3.tgz",
++      "integrity": "sha512-5gTmgEY/sqK6gFXLIsQNH19lWb4ebPDLA4SdLP7dsWkIXHWlG66oPuVvXSGFPppYZz8ZDZq0dYYrbHfBCVUb1Q==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=12"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/jonschlinkert"
++      }
++    },
++    "node_modules/postcss": {
++      "version": "8.5.8",
++      "resolved": "https://registry.npmjs.org/postcss/-/postcss-8.5.8.tgz",
++      "integrity": "sha512-OW/rX8O/jXnm82Ey1k44pObPtdblfiuWnrd8X7GJ7emImCOstunGbXUpp7HdBrFQX6rJzn3sPT397Wp5aCwCHg==",
++      "dev": true,
++      "funding": [
++        {
++          "type": "opencollective",
++          "url": "https://opencollective.com/postcss/"
++        },
++        {
++          "type": "tidelift",
++          "url": "https://tidelift.com/funding/github/npm/postcss"
++        },
++        {
++          "type": "github",
++          "url": "https://github.com/sponsors/ai"
++        }
++      ],
++      "license": "MIT",
++      "dependencies": {
++        "nanoid": "^3.3.11",
++        "picocolors": "^1.1.1",
++        "source-map-js": "^1.2.1"
++      },
++      "engines": {
++        "node": "^10 || ^12 || >=14"
++      }
++    },
++    "node_modules/prebuild-install": {
++      "version": "7.1.3",
++      "resolved": "https://registry.npmjs.org/prebuild-install/-/prebuild-install-7.1.3.tgz",
++      "integrity": "sha512-8Mf2cbV7x1cXPUILADGI3wuhfqWvtiLA1iclTDbFRZkgRQS0NqsPZphna9V+HyTEadheuPmjaJMsbzKQFOzLug==",
++      "deprecated": "No longer maintained. Please contact the author of the relevant native addon; alternatives are available.",
++      "license": "MIT",
++      "dependencies": {
++        "detect-libc": "^2.0.0",
++        "expand-template": "^2.0.3",
++        "github-from-package": "0.0.0",
++        "minimist": "^1.2.3",
++        "mkdirp-classic": "^0.5.3",
++        "napi-build-utils": "^2.0.0",
++        "node-abi": "^3.3.0",
++        "pump": "^3.0.0",
++        "rc": "^1.2.7",
++        "simple-get": "^4.0.0",
++        "tar-fs": "^2.0.0",
++        "tunnel-agent": "^0.6.0"
++      },
++      "bin": {
++        "prebuild-install": "bin.js"
++      },
++      "engines": {
++        "node": ">=10"
++      }
++    },
++    "node_modules/pump": {
++      "version": "3.0.4",
++      "resolved": "https://registry.npmjs.org/pump/-/pump-3.0.4.tgz",
++      "integrity": "sha512-VS7sjc6KR7e1ukRFhQSY5LM2uBWAUPiOPa/A3mkKmiMwSmRFUITt0xuj+/lesgnCv+dPIEYlkzrcyXgquIHMcA==",
++      "license": "MIT",
++      "dependencies": {
++        "end-of-stream": "^1.1.0",
++        "once": "^1.3.1"
++      }
++    },
++    "node_modules/rc": {
++      "version": "1.2.8",
++      "resolved": "https://registry.npmjs.org/rc/-/rc-1.2.8.tgz",
++      "integrity": "sha512-y3bGgqKj3QBdxLbLkomlohkvsA8gdAiUQlSBJnBhfn+BPxg4bc62d8TcBW15wavDfgexCgccckhcZvywyQYPOw==",
++      "license": "(BSD-2-Clause OR MIT OR Apache-2.0)",
++      "dependencies": {
++        "deep-extend": "^0.6.0",
++        "ini": "~1.3.0",
++        "minimist": "^1.2.0",
++        "strip-json-comments": "~2.0.1"
++      },
++      "bin": {
++        "rc": "cli.js"
++      }
++    },
++    "node_modules/readable-stream": {
++      "version": "3.6.2",
++      "resolved": "https://registry.npmjs.org/readable-stream/-/readable-stream-3.6.2.tgz",
++      "integrity": "sha512-9u/sniCrY3D5WdsERHzHE4G2YCXqoG5FTHUiCC4SIbr6XcLZBY05ya9EKjYek9O5xOAwjGq+1JdGBAS7Q9ScoA==",
++      "license": "MIT",
++      "dependencies": {
++        "inherits": "^2.0.3",
++        "string_decoder": "^1.1.1",
++        "util-deprecate": "^1.0.1"
++      },
++      "engines": {
++        "node": ">= 6"
++      }
++    },
+     "node_modules/resolve-pkg-maps": {
+       "version": "1.0.0",
+       "resolved": "https://registry.npmjs.org/resolve-pkg-maps/-/resolve-pkg-maps-1.0.0.tgz",
+@@ -568,6 +1560,249 @@
+         "url": "https://github.com/privatenumber/resolve-pkg-maps?sponsor=1"
+       }
+     },
++    "node_modules/rollup": {
++      "version": "4.59.0",
++      "resolved": "https://registry.npmjs.org/rollup/-/rollup-4.59.0.tgz",
++      "integrity": "sha512-2oMpl67a3zCH9H79LeMcbDhXW/UmWG/y2zuqnF2jQq5uq9TbM9TVyXvA4+t+ne2IIkBdrLpAaRQAvo7YI/Yyeg==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@types/estree": "1.0.8"
++      },
++      "bin": {
++        "rollup": "dist/bin/rollup"
++      },
++      "engines": {
++        "node": ">=18.0.0",
++        "npm": ">=8.0.0"
++      },
++      "optionalDependencies": {
++        "@rollup/rollup-android-arm-eabi": "4.59.0",
++        "@rollup/rollup-android-arm64": "4.59.0",
++        "@rollup/rollup-darwin-arm64": "4.59.0",
++        "@rollup/rollup-darwin-x64": "4.59.0",
++        "@rollup/rollup-freebsd-arm64": "4.59.0",
++        "@rollup/rollup-freebsd-x64": "4.59.0",
++        "@rollup/rollup-linux-arm-gnueabihf": "4.59.0",
++        "@rollup/rollup-linux-arm-musleabihf": "4.59.0",
++        "@rollup/rollup-linux-arm64-gnu": "4.59.0",
++        "@rollup/rollup-linux-arm64-musl": "4.59.0",
++        "@rollup/rollup-linux-loong64-gnu": "4.59.0",
++        "@rollup/rollup-linux-loong64-musl": "4.59.0",
++        "@rollup/rollup-linux-ppc64-gnu": "4.59.0",
++        "@rollup/rollup-linux-ppc64-musl": "4.59.0",
++        "@rollup/rollup-linux-riscv64-gnu": "4.59.0",
++        "@rollup/rollup-linux-riscv64-musl": "4.59.0",
++        "@rollup/rollup-linux-s390x-gnu": "4.59.0",
++        "@rollup/rollup-linux-x64-gnu": "4.59.0",
++        "@rollup/rollup-linux-x64-musl": "4.59.0",
++        "@rollup/rollup-openbsd-x64": "4.59.0",
++        "@rollup/rollup-openharmony-arm64": "4.59.0",
++        "@rollup/rollup-win32-arm64-msvc": "4.59.0",
++        "@rollup/rollup-win32-ia32-msvc": "4.59.0",
++        "@rollup/rollup-win32-x64-gnu": "4.59.0",
++        "@rollup/rollup-win32-x64-msvc": "4.59.0",
++        "fsevents": "~2.3.2"
++      }
++    },
++    "node_modules/safe-buffer": {
++      "version": "5.2.1",
++      "resolved": "https://registry.npmjs.org/safe-buffer/-/safe-buffer-5.2.1.tgz",
++      "integrity": "sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ==",
++      "funding": [
++        {
++          "type": "github",
++          "url": "https://github.com/sponsors/feross"
++        },
++        {
++          "type": "patreon",
++          "url": "https://www.patreon.com/feross"
++        },
++        {
++          "type": "consulting",
++          "url": "https://feross.org/support"
++        }
++      ],
++      "license": "MIT"
++    },
++    "node_modules/semver": {
++      "version": "7.7.4",
++      "resolved": "https://registry.npmjs.org/semver/-/semver-7.7.4.tgz",
++      "integrity": "sha512-vFKC2IEtQnVhpT78h1Yp8wzwrf8CM+MzKMHGJZfBtzhZNycRFnXsHk6E5TxIkkMsgNS7mdX3AGB7x2QM2di4lA==",
++      "license": "ISC",
++      "bin": {
++        "semver": "bin/semver.js"
++      },
++      "engines": {
++        "node": ">=10"
++      }
++    },
++    "node_modules/siginfo": {
++      "version": "2.0.0",
++      "resolved": "https://registry.npmjs.org/siginfo/-/siginfo-2.0.0.tgz",
++      "integrity": "sha512-ybx0WO1/8bSBLEWXZvEd7gMW3Sn3JFlW3TvX1nREbDLRNQNaeNN8WK0meBwPdAaOI7TtRRRJn/Es1zhrrCHu7g==",
++      "dev": true,
++      "license": "ISC"
++    },
++    "node_modules/simple-concat": {
++      "version": "1.0.1",
++      "resolved": "https://registry.npmjs.org/simple-concat/-/simple-concat-1.0.1.tgz",
++      "integrity": "sha512-cSFtAPtRhljv69IK0hTVZQ+OfE9nePi/rtJmw5UjHeVyVroEqJXP1sFztKUy1qU+xvz3u/sfYJLa947b7nAN2Q==",
++      "funding": [
++        {
++          "type": "github",
++          "url": "https://github.com/sponsors/feross"
++        },
++        {
++          "type": "patreon",
++          "url": "https://www.patreon.com/feross"
++        },
++        {
++          "type": "consulting",
++          "url": "https://feross.org/support"
++        }
++      ],
++      "license": "MIT"
++    },
++    "node_modules/simple-get": {
++      "version": "4.0.1",
++      "resolved": "https://registry.npmjs.org/simple-get/-/simple-get-4.0.1.tgz",
++      "integrity": "sha512-brv7p5WgH0jmQJr1ZDDfKDOSeWWg+OVypG99A/5vYGPqJ6pxiaHLy8nxtFjBA7oMa01ebA9gfh1uMCFqOuXxvA==",
++      "funding": [
++        {
++          "type": "github",
++          "url": "https://github.com/sponsors/feross"
++        },
++        {
++          "type": "patreon",
++          "url": "https://www.patreon.com/feross"
++        },
++        {
++          "type": "consulting",
++          "url": "https://feross.org/support"
++        }
++      ],
++      "license": "MIT",
++      "dependencies": {
++        "decompress-response": "^6.0.0",
++        "once": "^1.3.1",
++        "simple-concat": "^1.0.0"
++      }
++    },
++    "node_modules/source-map-js": {
++      "version": "1.2.1",
++      "resolved": "https://registry.npmjs.org/source-map-js/-/source-map-js-1.2.1.tgz",
++      "integrity": "sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==",
++      "dev": true,
++      "license": "BSD-3-Clause",
++      "engines": {
++        "node": ">=0.10.0"
++      }
++    },
++    "node_modules/stackback": {
++      "version": "0.0.2",
++      "resolved": "https://registry.npmjs.org/stackback/-/stackback-0.0.2.tgz",
++      "integrity": "sha512-1XMJE5fQo1jGH6Y/7ebnwPOBEkIEnT4QF32d5R1+VXdXveM0IBMJt8zfaxX1P3QhVwrYe+576+jkANtSS2mBbw==",
++      "dev": true,
++      "license": "MIT"
++    },
++    "node_modules/std-env": {
++      "version": "3.10.0",
++      "resolved": "https://registry.npmjs.org/std-env/-/std-env-3.10.0.tgz",
++      "integrity": "sha512-5GS12FdOZNliM5mAOxFRg7Ir0pWz8MdpYm6AY6VPkGpbA7ZzmbzNcBJQ0GPvvyWgcY7QAhCgf9Uy89I03faLkg==",
++      "dev": true,
++      "license": "MIT"
++    },
++    "node_modules/string_decoder": {
++      "version": "1.3.0",
++      "resolved": "https://registry.npmjs.org/string_decoder/-/string_decoder-1.3.0.tgz",
++      "integrity": "sha512-hkRX8U1WjJFd8LsDJ2yQ/wWWxaopEsABU1XfkM8A+j0+85JAGppt16cr1Whg6KIbb4okU6Mql6BOj+uup/wKeA==",
++      "license": "MIT",
++      "dependencies": {
++        "safe-buffer": "~5.2.0"
++      }
++    },
++    "node_modules/strip-json-comments": {
++      "version": "2.0.1",
++      "resolved": "https://registry.npmjs.org/strip-json-comments/-/strip-json-comments-2.0.1.tgz",
++      "integrity": "sha512-4gB8na07fecVVkOI6Rs4e7T6NOTki5EmL7TUduTs6bu3EdnSycntVJ4re8kgZA+wx9IueI2Y11bfbgwtzuE0KQ==",
++      "license": "MIT",
++      "engines": {
++        "node": ">=0.10.0"
++      }
++    },
++    "node_modules/tar-fs": {
++      "version": "2.1.4",
++      "resolved": "https://registry.npmjs.org/tar-fs/-/tar-fs-2.1.4.tgz",
++      "integrity": "sha512-mDAjwmZdh7LTT6pNleZ05Yt65HC3E+NiQzl672vQG38jIrehtJk/J3mNwIg+vShQPcLF/LV7CMnDW6vjj6sfYQ==",
++      "license": "MIT",
++      "dependencies": {
++        "chownr": "^1.1.1",
++        "mkdirp-classic": "^0.5.2",
++        "pump": "^3.0.0",
++        "tar-stream": "^2.1.4"
++      }
++    },
++    "node_modules/tar-stream": {
++      "version": "2.2.0",
++      "resolved": "https://registry.npmjs.org/tar-stream/-/tar-stream-2.2.0.tgz",
++      "integrity": "sha512-ujeqbceABgwMZxEJnk2HDY2DlnUZ+9oEcb1KzTVfYHio0UE6dG71n60d8D2I4qNvleWrrXpmjpt7vZeF1LnMZQ==",
++      "license": "MIT",
++      "dependencies": {
++        "bl": "^4.0.3",
++        "end-of-stream": "^1.4.1",
++        "fs-constants": "^1.0.0",
++        "inherits": "^2.0.3",
++        "readable-stream": "^3.1.1"
++      },
++      "engines": {
++        "node": ">=6"
++      }
++    },
++    "node_modules/tinybench": {
++      "version": "2.9.0",
++      "resolved": "https://registry.npmjs.org/tinybench/-/tinybench-2.9.0.tgz",
++      "integrity": "sha512-0+DUvqWMValLmha6lr4kD8iAMK1HzV0/aKnCtWb9v9641TnP/MFb7Pc2bxoxQjTXAErryXVgUOfv2YqNllqGeg==",
++      "dev": true,
++      "license": "MIT"
++    },
++    "node_modules/tinyexec": {
++      "version": "1.0.2",
++      "resolved": "https://registry.npmjs.org/tinyexec/-/tinyexec-1.0.2.tgz",
++      "integrity": "sha512-W/KYk+NFhkmsYpuHq5JykngiOCnxeVL8v8dFnqxSD8qEEdRfXk1SDM6JzNqcERbcGYj9tMrDQBYV9cjgnunFIg==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=18"
++      }
++    },
++    "node_modules/tinyglobby": {
++      "version": "0.2.15",
++      "resolved": "https://registry.npmjs.org/tinyglobby/-/tinyglobby-0.2.15.tgz",
++      "integrity": "sha512-j2Zq4NyQYG5XMST4cbs02Ak8iJUdxRM0XI5QyxXuZOzKOINmWurp3smXu3y5wDcJrptwpSjgXHzIQxR0omXljQ==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "fdir": "^6.5.0",
++        "picomatch": "^4.0.3"
++      },
++      "engines": {
++        "node": ">=12.0.0"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/SuperchupuDev"
++      }
++    },
++    "node_modules/tinyrainbow": {
++      "version": "3.0.3",
++      "resolved": "https://registry.npmjs.org/tinyrainbow/-/tinyrainbow-3.0.3.tgz",
++      "integrity": "sha512-PSkbLUoxOFRzJYjjxHJt9xro7D+iilgMX/C9lawzVuYiIdcihh9DXmVibBe8lmcFrRi/VzlPjBxbN7rH24q8/Q==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=14.0.0"
++      }
++    },
+     "node_modules/tsx": {
+       "version": "4.21.0",
+       "resolved": "https://registry.npmjs.org/tsx/-/tsx-4.21.0.tgz",
+@@ -588,6 +1823,18 @@
+         "fsevents": "~2.3.3"
+       }
+     },
++    "node_modules/tunnel-agent": {
++      "version": "0.6.0",
++      "resolved": "https://registry.npmjs.org/tunnel-agent/-/tunnel-agent-0.6.0.tgz",
++      "integrity": "sha512-McnNiV1l8RYeY8tBgEpuodCC1mLUdbSN+CYBL7kJsJNInOP8UjDDEwdk6Mw60vdLLrr5NHKZhMAOSrR2NZuQ+w==",
++      "license": "Apache-2.0",
++      "dependencies": {
++        "safe-buffer": "^5.0.1"
++      },
++      "engines": {
++        "node": "*"
++      }
++    },
+     "node_modules/typescript": {
+       "version": "5.9.3",
+       "resolved": "https://registry.npmjs.org/typescript/-/typescript-5.9.3.tgz",
+@@ -608,6 +1855,188 @@
+       "integrity": "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==",
+       "dev": true,
+       "license": "MIT"
++    },
++    "node_modules/util-deprecate": {
++      "version": "1.0.2",
++      "resolved": "https://registry.npmjs.org/util-deprecate/-/util-deprecate-1.0.2.tgz",
++      "integrity": "sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==",
++      "license": "MIT"
++    },
++    "node_modules/vite": {
++      "version": "7.3.1",
++      "resolved": "https://registry.npmjs.org/vite/-/vite-7.3.1.tgz",
++      "integrity": "sha512-w+N7Hifpc3gRjZ63vYBXA56dvvRlNWRczTdmCBBa+CotUzAPf5b7YMdMR/8CQoeYE5LX3W4wj6RYTgonm1b9DA==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "esbuild": "^0.27.0",
++        "fdir": "^6.5.0",
++        "picomatch": "^4.0.3",
++        "postcss": "^8.5.6",
++        "rollup": "^4.43.0",
++        "tinyglobby": "^0.2.15"
++      },
++      "bin": {
++        "vite": "bin/vite.js"
++      },
++      "engines": {
++        "node": "^20.19.0 || >=22.12.0"
++      },
++      "funding": {
++        "url": "https://github.com/vitejs/vite?sponsor=1"
++      },
++      "optionalDependencies": {
++        "fsevents": "~2.3.3"
++      },
++      "peerDependencies": {
++        "@types/node": "^20.19.0 || >=22.12.0",
++        "jiti": ">=1.21.0",
++        "less": "^4.0.0",
++        "lightningcss": "^1.21.0",
++        "sass": "^1.70.0",
++        "sass-embedded": "^1.70.0",
++        "stylus": ">=0.54.8",
++        "sugarss": "^5.0.0",
++        "terser": "^5.16.0",
++        "tsx": "^4.8.1",
++        "yaml": "^2.4.2"
++      },
++      "peerDependenciesMeta": {
++        "@types/node": {
++          "optional": true
++        },
++        "jiti": {
++          "optional": true
++        },
++        "less": {
++          "optional": true
++        },
++        "lightningcss": {
++          "optional": true
++        },
++        "sass": {
++          "optional": true
++        },
++        "sass-embedded": {
++          "optional": true
++        },
++        "stylus": {
++          "optional": true
++        },
++        "sugarss": {
++          "optional": true
++        },
++        "terser": {
++          "optional": true
++        },
++        "tsx": {
++          "optional": true
++        },
++        "yaml": {
++          "optional": true
++        }
++      }
++    },
++    "node_modules/vitest": {
++      "version": "4.0.18",
++      "resolved": "https://registry.npmjs.org/vitest/-/vitest-4.0.18.tgz",
++      "integrity": "sha512-hOQuK7h0FGKgBAas7v0mSAsnvrIgAvWmRFjmzpJ7SwFHH3g1k2u37JtYwOwmEKhK6ZO3v9ggDBBm0La1LCK4uQ==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@vitest/expect": "4.0.18",
++        "@vitest/mocker": "4.0.18",
++        "@vitest/pretty-format": "4.0.18",
++        "@vitest/runner": "4.0.18",
++        "@vitest/snapshot": "4.0.18",
++        "@vitest/spy": "4.0.18",
++        "@vitest/utils": "4.0.18",
++        "es-module-lexer": "^1.7.0",
++        "expect-type": "^1.2.2",
++        "magic-string": "^0.30.21",
++        "obug": "^2.1.1",
++        "pathe": "^2.0.3",
++        "picomatch": "^4.0.3",
++        "std-env": "^3.10.0",
++        "tinybench": "^2.9.0",
++        "tinyexec": "^1.0.2",
++        "tinyglobby": "^0.2.15",
++        "tinyrainbow": "^3.0.3",
++        "vite": "^6.0.0 || ^7.0.0",
++        "why-is-node-running": "^2.3.0"
++      },
++      "bin": {
++        "vitest": "vitest.mjs"
++      },
++      "engines": {
++        "node": "^20.0.0 || ^22.0.0 || >=24.0.0"
++      },
++      "funding": {
++        "url": "https://opencollective.com/vitest"
++      },
++      "peerDependencies": {
++        "@edge-runtime/vm": "*",
++        "@opentelemetry/api": "^1.9.0",
++        "@types/node": "^20.0.0 || ^22.0.0 || >=24.0.0",
++        "@vitest/browser-playwright": "4.0.18",
++        "@vitest/browser-preview": "4.0.18",
++        "@vitest/browser-webdriverio": "4.0.18",
++        "@vitest/ui": "4.0.18",
++        "happy-dom": "*",
++        "jsdom": "*"
++      },
++      "peerDependenciesMeta": {
++        "@edge-runtime/vm": {
++          "optional": true
++        },
++        "@opentelemetry/api": {
++          "optional": true
++        },
++        "@types/node": {
++          "optional": true
++        },
++        "@vitest/browser-playwright": {
++          "optional": true
++        },
++        "@vitest/browser-preview": {
++          "optional": true
++        },
++        "@vitest/browser-webdriverio": {
++          "optional": true
++        },
++        "@vitest/ui": {
++          "optional": true
++        },
++        "happy-dom": {
++          "optional": true
++        },
++        "jsdom": {
++          "optional": true
++        }
++      }
++    },
++    "node_modules/why-is-node-running": {
++      "version": "2.3.0",
++      "resolved": "https://registry.npmjs.org/why-is-node-running/-/why-is-node-running-2.3.0.tgz",
++      "integrity": "sha512-hUrmaWBdVDcxvYqnyh09zunKzROWjbZTiNy8dBEjkS7ehEDQibXJ7XvlmtbwuTclUiIyN+CyXQD4Vmko8fNm8w==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "siginfo": "^2.0.0",
++        "stackback": "0.0.2"
++      },
++      "bin": {
++        "why-is-node-running": "cli.js"
++      },
++      "engines": {
++        "node": ">=8"
++      }
++    },
++    "node_modules/wrappy": {
++      "version": "1.0.2",
++      "resolved": "https://registry.npmjs.org/wrappy/-/wrappy-1.0.2.tgz",
++      "integrity": "sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==",
++      "license": "ISC"
+     }
+   }
+ }
+diff --git a/package.json b/package.json
+index d01b60a..32dd612 100644
+--- a/package.json
++++ b/package.json
+@@ -4,15 +4,20 @@
+   "scripts": {
+     "dev": "tsx watch src/index.ts",
+     "build": "tsc",
+-    "start": "node dist/index.js"
++    "start": "node dist/index.js",
++    "test": "vitest run"
+   },
+   "dependencies": {
+     "@hono/node-server": "^1.19.11",
++    "better-sqlite3": "^12.6.2",
++    "dotenv": "^17.3.1",
+     "hono": "^4.12.5"
+   },
+   "devDependencies": {
++    "@types/better-sqlite3": "^7.6.13",
+     "@types/node": "^20.11.17",
+     "tsx": "^4.7.1",
+-    "typescript": "^5.8.3"
++    "typescript": "^5.8.3",
++    "vitest": "^4.0.18"
+   }
+-}
+\ No newline at end of file
++}
+diff --git a/scripts/curl-examples.sh b/scripts/curl-examples.sh
+new file mode 100755
+index 0000000..ec3179a
+--- /dev/null
++++ b/scripts/curl-examples.sh
+@@ -0,0 +1,117 @@
++#!/usr/bin/env bash
++#
++# Curl usage examples for the Data Broker Read API.
++# Each command can be run independently.
++# Adjust BASE_URL, user IDs, league IDs, etc. for your environment.
++
++BASE_URL="http://localhost:3000"
++
++echo "=== User Data Endpoints ==="
++echo ""
++
++echo "# Get default league/season for a user"
++echo 'curl -s "$BASE_URL/api/user/testuser1/default-league-season" | jq .'
++curl -s "$BASE_URL/api/user/testuser1/default-league-season" | jq . 2>/dev/null || true
++echo ""
++
++echo "# Get enabled features for a user"
++echo 'curl -s "$BASE_URL/api/user/testuser1/features" | jq .'
++curl -s "$BASE_URL/api/user/testuser1/features" | jq . 2>/dev/null || true
++echo ""
++
++echo "# Get iRacing link state for a user"
++echo 'curl -s "$BASE_URL/api/user/testuser1/ir-link-state" | jq .'
++curl -s "$BASE_URL/api/user/testuser1/ir-link-state" | jq . 2>/dev/null || true
++echo ""
++
++echo "# Get leagues a user is interested in"
++echo 'curl -s "$BASE_URL/api/user/testuser1/leagues" | jq .'
++curl -s "$BASE_URL/api/user/testuser1/leagues" | jq . 2>/dev/null || true
++echo ""
++
++echo "# Resolve user context (auto-detect closest event)"
++echo 'curl -s "$BASE_URL/api/user/testuser1/context" | jq .'
++curl -s "$BASE_URL/api/user/testuser1/context" | jq . 2>/dev/null || true
++echo ""
++
++echo "# Resolve user context for a specific league"
++echo 'curl -s "$BASE_URL/api/user/testuser1/context?league=6555" | jq .'
++curl -s "$BASE_URL/api/user/testuser1/context?league=6555" | jq . 2>/dev/null || true
++echo ""
++
++echo "# Resolve user context for a specific league and season"
++echo 'curl -s "$BASE_URL/api/user/testuser1/context?league=6555&season=99410" | jq .'
++curl -s "$BASE_URL/api/user/testuser1/context?league=6555&season=99410" | jq . 2>/dev/null || true
++echo ""
++
++echo "=== Config Endpoints ==="
++echo ""
++
++echo "# Get teams and members for a league"
++echo 'curl -s "$BASE_URL/api/config/leagues/6555/teams" | jq .'
++curl -s "$BASE_URL/api/config/leagues/6555/teams" | jq . 2>/dev/null || true
++echo ""
++
++echo "# Get active league schedule"
++echo 'curl -s "$BASE_URL/api/config/active-league-schedule" | jq .'
++curl -s "$BASE_URL/api/config/active-league-schedule" | jq . 2>/dev/null || true
++echo ""
++
++echo "# Get track display information"
++echo 'curl -s "$BASE_URL/api/config/tracks" | jq .'
++curl -s "$BASE_URL/api/config/tracks" | jq . 2>/dev/null || true
++echo ""
++
++echo "# Resolve config context (no user)"
++echo 'curl -s "$BASE_URL/api/config/context" | jq .'
++curl -s "$BASE_URL/api/config/context" | jq . 2>/dev/null || true
++echo ""
++
++echo "=== Publication Endpoints ==="
++echo ""
++
++echo "# Check if a subsession has been published"
++echo 'curl -s "$BASE_URL/api/publications/12345/status" | jq .'
++curl -s "$BASE_URL/api/publications/12345/status" | jq . 2>/dev/null || true
++echo ""
++
++echo "# Invalid subsession ID returns 400"
++echo 'curl -s -w "\nHTTP %{http_code}\n" "$BASE_URL/api/publications/notanumber/status"'
++curl -s -w "\nHTTP %{http_code}\n" "$BASE_URL/api/publications/notanumber/status" 2>/dev/null || true
++echo ""
++
++echo "=== Channel Endpoints ==="
++echo ""
++
++echo "# Get user ID mappings for a channel"
++echo 'curl -s "$BASE_URL/api/channels/ch001/users" | jq .'
++curl -s "$BASE_URL/api/channels/ch001/users" | jq . 2>/dev/null || true
++echo ""
++
++echo "=== Data Lake Endpoints ==="
++echo ""
++
++echo "# Fetch league seasons from data lake"
++echo 'curl -s "$BASE_URL/api/datalake/ldata-irweb/leagueSeasons?league=6555" | jq .'
++curl -s "$BASE_URL/api/datalake/ldata-irweb/leagueSeasons?league=6555" | jq . 2>/dev/null || true
++echo ""
++
++echo "# Fetch league season sessions from data lake"
++echo 'curl -s "$BASE_URL/api/datalake/ldata-irweb/leagueSeasonSessions?league=6555&season=99410" | jq .'
++curl -s "$BASE_URL/api/datalake/ldata-irweb/leagueSeasonSessions?league=6555&season=99410" | jq . 2>/dev/null || true
++echo ""
++
++echo "# Fetch driver stats from data lake"
++echo 'curl -s "$BASE_URL/api/datalake/ldata-rsltsts/leagueDriverStats?league=6555" | jq .'
++curl -s "$BASE_URL/api/datalake/ldata-rsltsts/leagueDriverStats?league=6555" | jq . 2>/dev/null || true
++echo ""
++
++echo "# Fetch single member data from data lake"
++echo 'curl -s "$BASE_URL/api/datalake/ldata-rsltsts/singleMemberData?driver=123456" | jq .'
++curl -s "$BASE_URL/api/datalake/ldata-rsltsts/singleMemberData?driver=123456" | jq . 2>/dev/null || true
++echo ""
++
++echo "# Fetch members data for a league season"
++echo 'curl -s "$BASE_URL/api/datalake/ldata-irweb/membersData?league=6555&season=99410" | jq .'
++curl -s "$BASE_URL/api/datalake/ldata-irweb/membersData?league=6555&season=99410" | jq . 2>/dev/null || true
++echo ""
+diff --git a/scripts/integration-test.sh b/scripts/integration-test.sh
+new file mode 100755
+index 0000000..56857a5
+--- /dev/null
++++ b/scripts/integration-test.sh
+@@ -0,0 +1,180 @@
++#!/usr/bin/env bash
++#
++# Integration tests for Data Broker Read API endpoints.
++# Usage: ./scripts/integration-test.sh [BASE_URL]
++#   BASE_URL defaults to http://localhost:3000
++#
++# Prerequisites: the server must be running (npm run dev)
++#
++# Each test issues a curl request and validates the HTTP status code.
++# Set USER_ID, LEAGUE_ID, SEASON_ID, CHANNEL_ID, SUBSESSION_ID as env vars
++# to test with your own data, or use the defaults below.
++
++set -euo pipefail
++
++BASE_URL="${1:-http://localhost:3030}"
++USER_ID="${USER_ID:-testuser1}"
++LEAGUE_ID="${LEAGUE_ID:-6555}"
++SEASON_ID="${SEASON_ID:-99410}"
++SUBSESSION_ID="${SUBSESSION_ID:-12345}"
++CHANNEL_ID="${CHANNEL_ID:-ch001}"
++
++PASS=0
++FAIL=0
++SKIP=0
++
++green()  { printf "\033[32m%s\033[0m" "$1"; }
++red()    { printf "\033[31m%s\033[0m" "$1"; }
++yellow() { printf "\033[33m%s\033[0m" "$1"; }
++
++# test_endpoint NAME METHOD URL EXPECTED_STATUS
++test_endpoint() {
++    local name="$1"
++    local url="$2"
++    local expected_status="${3:-200}"
++
++    local http_code body
++    body=$(curl -s -o /dev/null -w '%{http_code}' "$url" 2>/dev/null) || true
++    http_code="$body"
++
++    # Get the full response body for display
++    local response
++    response=$(curl -s "$url" 2>/dev/null | head -c 500) || true
++
++    if [ "$http_code" = "$expected_status" ]; then
++        PASS=$((PASS + 1))
++        echo "  $(green "PASS") $name (HTTP $http_code)"
++    else
++        FAIL=$((FAIL + 1))
++        echo "  $(red "FAIL") $name - expected $expected_status, got $http_code"
++    fi
++
++    # Show a truncated response for inspection
++    echo "        curl: $url"
++    echo "        body: ${response:0:200}"
++    echo ""
++}
++
++echo ""
++echo "========================================"
++echo " Data Broker Read API - Integration Test"
++echo " Base URL: $BASE_URL"
++echo "========================================"
++echo ""
++
++# --- Connectivity check ---
++echo "--- Connectivity ---"
++if ! curl -s -o /dev/null -w '' "$BASE_URL/" 2>/dev/null; then
++    echo "  $(red "ERROR") Cannot reach $BASE_URL - is the server running?"
++    echo "  Start with: npm run dev"
++    exit 1
++fi
++echo "  $(green "OK") Server reachable"
++echo ""
++
++# --- User Data Endpoints ---
++echo "--- User Data Endpoints ---"
++
++test_endpoint \
++    "GET /api/user/:userId/default-league-season" \
++    "$BASE_URL/api/user/$USER_ID/default-league-season"
++
++test_endpoint \
++    "GET /api/user/:userId/features" \
++    "$BASE_URL/api/user/$USER_ID/features"
++
++test_endpoint \
++    "GET /api/user/:userId/ir-link-state" \
++    "$BASE_URL/api/user/$USER_ID/ir-link-state"
++
++test_endpoint \
++    "GET /api/user/:userId/leagues" \
++    "$BASE_URL/api/user/$USER_ID/leagues"
++
++test_endpoint \
++    "GET /api/user/:userId/context (no params)" \
++    "$BASE_URL/api/user/$USER_ID/context"
++
++test_endpoint \
++    "GET /api/user/:userId/context (with league)" \
++    "$BASE_URL/api/user/$USER_ID/context?league=$LEAGUE_ID"
++
++test_endpoint \
++    "GET /api/user/:userId/context (with league+season)" \
++    "$BASE_URL/api/user/$USER_ID/context?league=$LEAGUE_ID&season=$SEASON_ID"
++
++test_endpoint \
++    "GET /api/user/:userId/context (with league+season+subsession)" \
++    "$BASE_URL/api/user/$USER_ID/context?league=$LEAGUE_ID&season=$SEASON_ID&subsession=$SUBSESSION_ID"
++
++# --- Config Endpoints ---
++echo "--- Config Endpoints ---"
++
++test_endpoint \
++    "GET /api/config/leagues/:leagueId/teams" \
++    "$BASE_URL/api/config/leagues/$LEAGUE_ID/teams"
++
++test_endpoint \
++    "GET /api/config/active-league-schedule" \
++    "$BASE_URL/api/config/active-league-schedule"
++
++test_endpoint \
++    "GET /api/config/tracks" \
++    "$BASE_URL/api/config/tracks"
++
++test_endpoint \
++    "GET /api/config/context (no params)" \
++    "$BASE_URL/api/config/context"
++
++test_endpoint \
++    "GET /api/config/context (with league)" \
++    "$BASE_URL/api/config/context?league=$LEAGUE_ID"
++
++test_endpoint \
++    "GET /api/config/context (with league+season)" \
++    "$BASE_URL/api/config/context?league=$LEAGUE_ID&season=$SEASON_ID"
++
++# --- Publication Endpoints ---
++echo "--- Publication Endpoints ---"
++
++test_endpoint \
++    "GET /api/publications/:subsessionId/status" \
++    "$BASE_URL/api/publications/$SUBSESSION_ID/status"
++
++test_endpoint \
++    "GET /api/publications/:subsessionId/status (invalid ID)" \
++    "$BASE_URL/api/publications/notanumber/status" \
++    "400"
++
++# --- Channel Endpoints ---
++echo "--- Channel Endpoints ---"
++
++test_endpoint \
++    "GET /api/channels/:channelId/users" \
++    "$BASE_URL/api/channels/$CHANNEL_ID/users"
++
++# --- Data Lake Endpoints ---
++echo "--- Data Lake Endpoints ---"
++
++test_endpoint \
++    "GET /api/datalake/:namespace/:type (league seasons)" \
++    "$BASE_URL/api/datalake/ldata-irweb/leagueSeasons?league=$LEAGUE_ID"
++
++test_endpoint \
++    "GET /api/datalake/:namespace/:type (league season sessions)" \
++    "$BASE_URL/api/datalake/ldata-irweb/leagueSeasonSessions?league=$LEAGUE_ID&season=$SEASON_ID"
++
++test_endpoint \
++    "GET /api/datalake/:namespace/:type (league driver stats)" \
++    "$BASE_URL/api/datalake/ldata-rsltsts/leagueDriverStats?league=$LEAGUE_ID"
++
++test_endpoint \
++    "GET /api/datalake/:namespace/:type (members data)" \
++    "$BASE_URL/api/datalake/ldata-irweb/membersData?league=$LEAGUE_ID&season=$SEASON_ID"
++
++# --- Summary ---
++echo "========================================"
++echo " Results: $(green "$PASS passed"), $(red "$FAIL failed")"
++echo "========================================"
++
++[ "$FAIL" -eq 0 ] && exit 0 || exit 1
+diff --git a/src/index.ts b/src/index.ts
+index bc1cc19..604d1c4 100644
+--- a/src/index.ts
++++ b/src/index.ts
+@@ -1,5 +1,7 @@
++import 'dotenv/config'
+ import { serve } from '@hono/node-server'
+ import { Hono } from 'hono'
++import { dtbrkrReadRoutes } from './routes/dtbrkr-read.js'
+ 
+ const app = new Hono()
+ 
+@@ -7,9 +9,13 @@ app.get('/', (c) => {
+   return c.text('Hello Hono!')
+ })
+ 
++app.route('/api', dtbrkrReadRoutes)
++
+ serve({
+   fetch: app.fetch,
+-  port: 3000
++  port: 3030
+ }, (info) => {
+   console.log(`Server is running on http://localhost:${info.port}`)
+ })
++
++export default app
+diff --git a/src/lplib/dtbrkr/usrcfg.ts b/src/lplib/dtbrkr/usrcfg.ts
+index 647e019..57b8380 100644
+--- a/src/lplib/dtbrkr/usrcfg.ts
++++ b/src/lplib/dtbrkr/usrcfg.ts
+@@ -1,6 +1,9 @@
+ import { getDocument as getDataLakeDocument } from './dtlkdata';
+ import { getActiveLeagueSchedule } from './lib-usrcfg/active-league-schedule';
+ import { sql } from './db';
++import { isValidSeason, isValidLeague } from './valid-util';
++import { warn } from 'console';
++
+ 
+ async function getLeagueTeamsInfo(league: string): Promise<any> {
+     console.log('getLeagueTeamsInfo():', league);
+@@ -62,35 +65,6 @@ async function getTrackDisplayInfo(): Promise<any> {
+     return ret;
+ }
+ 
+-async function isValidSeason(season: string): Promise<number> {
+-    console.log('isValidSeason()');
+-    const season_id = Number.parseInt(season, 10);
+-    if (isNaN(season_id)) {
+-        return 0;
+-    }
+-
+-    const { records } = await sql`
+-        SELECT "league_id"
+-        FROM "seasons"
+-        WHERE "season_id"=${season_id}`;
+-
+-    return records.length > 0 ? (<any>records)[0].league_id : 0;
+-}
+-
+-async function isValidLeague(league: string): Promise<boolean> {
+-    const league_id = Number.parseInt(league, 10);
+-    if (isNaN(league_id)) {
+-        return false;
+-    }
+-
+-    const { records } = await sql`
+-        SELECT "season_id"
+-        FROM "seasons"
+-        WHERE "league_id"=${league_id}`;
+-
+-    return records.length > 0;
+-}
+-
+ async function defLgSeasSubCtx_noParams(): Promise<any> {
+     console.log('defLgSeasSubCtx_noParams()');
+ 
+@@ -119,7 +93,7 @@ async function defLgSeasSubCtx_noParams(): Promise<any> {
+     const now = new Date().getTime();
+     const ret =
+         new Date(futRecs.time).getTime() - now <
+-        now - new Date(pasRecs.time).getTime()
++            now - new Date(pasRecs.time).getTime()
+             ? futRecs
+             : pasRecs;
+ 
+@@ -184,7 +158,7 @@ async function defLgSeasSubCtx_forLeague(league: string): Promise<any> {
+         const now = new Date().getTime();
+         ret =
+             new Date(futRecs.time).getTime() - now <
+-            now - new Date(pasRecs.time).getTime()
++                now - new Date(pasRecs.time).getTime()
+                 ? futRecs
+                 : pasRecs;
+     }
+@@ -215,7 +189,7 @@ async function defLgSeasSubCtx_forSeason(
+ ): Promise<any> {
+     console.log('defLgSeasSubCtx_forSeason()');
+ 
+-    if ((await isValidSeason(season)) === 0) {
++    if ((await isValidSeason(league, season)) === 0) {
+         return defLgSeasSubCtx_forLeague(league);
+     }
+ 
+@@ -241,19 +215,22 @@ async function defLgSeasSubCtx_forSeason(
+     const futRecs: any = p1.records[0];
+     const pasRecs: any = p2.records[0];
+ 
+-    let ret: any = [];
++    let ret: any = {};
+ 
+     if (!futRecs && !pasRecs) {
+-        return await defLgSeasSubCtx_forLeague(league);
+-    } else if (!futRecs) {
++        // we couldn't find any scheduled events but 
++        // we can trust the result from isValidSeason
++        ret.league_id = league;
++        ret.season_id = season;
++    } else if (!futRecs && pasRecs) {
+         ret = pasRecs;
+-    } else if (!pasRecs) {
++    } else if (!pasRecs && futRecs) {
+         ret = futRecs;
+     } else {
+         const now = new Date().getTime();
+         ret =
+             new Date(futRecs.time).getTime() - now <
+-            now - new Date(pasRecs.time).getTime()
++                now - new Date(pasRecs.time).getTime()
+                 ? futRecs
+                 : pasRecs;
+     }
+@@ -345,7 +322,7 @@ async function defLgSeasSubCtx(
+         } else {
+             ret = await defLgSeasSubCtx_noParams();
+         }
+-    } catch (e) {}
++    } catch (e) { }
+ 
+     return ret;
+ }
+diff --git a/src/lplib/dtbrkr/usrdata.ts b/src/lplib/dtbrkr/usrdata.ts
+index 2bb3e48..c773b17 100644
+--- a/src/lplib/dtbrkr/usrdata.ts
++++ b/src/lplib/dtbrkr/usrdata.ts
+@@ -1,5 +1,6 @@
+ import { getDocument as getDataLakeDocument } from './dtlkdata';
+ import { sql } from './db';
++import { isValidSeason, isValidLeague } from './valid-util';
+ 
+ export async function getDefaultLeagueSeason(user_id: string): Promise<any> {
+     console.log('getDefaultLeagueSeason()', user_id);
+@@ -191,35 +192,6 @@ async function updUserLeaguesState(
+     return await getUserLeaguesState(user_id);
+ }
+ 
+-async function isValidSeason(season: string): Promise<number> {
+-    console.log('isValidSeason()');
+-    const season_id = Number.parseInt(season, 10);
+-    if (isNaN(season_id)) {
+-        return 0;
+-    }
+-
+-    const { records } = await sql`
+-        SELECT "league_id"
+-        FROM "seasons"
+-        WHERE "season_id"=${season_id}`;
+-
+-    return records.length > 0 ? (<any>records)[0].league_id : 0;
+-}
+-
+-async function isValidLeague(league: string): Promise<boolean> {
+-    const league_id = Number.parseInt(league, 10);
+-    if (isNaN(league_id)) {
+-        return false;
+-    }
+-
+-    const { records } = await sql`
+-        SELECT "season_id"
+-        FROM "seasons"
+-        WHERE "league_id"=${league_id}`;
+-
+-    return records.length > 0;
+-}
+-
+ async function defLgSeasSubCtx_noParams(userID: string): Promise<any> {
+     console.log('defLgSeasSubCtx_noParams()', `[${userID}]`);
+ 
+@@ -352,7 +324,7 @@ async function defLgSeasSubCtx_forSeason(
+ ): Promise<any> {
+     console.log('defLgSeasSubCtx_forSeason()');
+ 
+-    if ((await isValidSeason(season)) === 0) {
++    if ((await isValidSeason(league, season)) === 0) {
+         return defLgSeasSubCtx_forLeague(userID, league);
+     }
+ 
+diff --git a/src/lplib/dtbrkr/valid-util.ts b/src/lplib/dtbrkr/valid-util.ts
+new file mode 100644
+index 0000000..c379642
+--- /dev/null
++++ b/src/lplib/dtbrkr/valid-util.ts
+@@ -0,0 +1,49 @@
++import { getDocument as getDataLakeDocument } from './dtlkdata';
++import { sql } from './db';
++
++export async function isValidSeason(league: string, season: string): Promise<number> {
++
++    console.log('isValidSeason()');
++    const season_id = Number.parseInt(season, 10);
++    if (isNaN(season_id)) {
++        console.log(`invalid season [NaN] ${season_id}`);
++        return 0;
++    }
++
++    const { records } = await sql`
++        SELECT "league_id"
++        FROM "seasons"
++        WHERE "season_id"=${season_id}`;
++
++    let ret = records.length > 0 ? (<any>records)[0].league_id : 0;
++    if (!ret) {
++        const league_id = Number.parseInt(league, 10);
++
++        const dlDoc = await getDataLakeDocument({
++            namespace: `ldata-irweb`,
++            type: `leagueSeasonSessions`,
++            league: league_id,
++            season: season_id,
++        });
++
++        // we were able to find the season-sessions 
++        // from the dataLake, this means it's valid
++        ret = (dlDoc) ? season_id : 0;
++    }
++
++    return ret;
++}
++
++export async function isValidLeague(league: string): Promise<boolean> {
++    const league_id = Number.parseInt(league, 10);
++    if (isNaN(league_id)) {
++        return false;
++    }
++
++    const { records } = await sql`
++        SELECT "season_id"
++        FROM "seasons"
++        WHERE "league_id"=${league_id}`;
++
++    return records.length > 0;
++}
+diff --git a/src/routes/dtbrkr-read.test.ts b/src/routes/dtbrkr-read.test.ts
+new file mode 100644
+index 0000000..d06ee90
+--- /dev/null
++++ b/src/routes/dtbrkr-read.test.ts
+@@ -0,0 +1,275 @@
++import { describe, it, expect, vi, beforeEach } from 'vitest';
++import { Hono } from 'hono';
++
++vi.mock('../lplib/dtbrkr/index', () => ({
++    userDataHandler: vi.fn(),
++    userConfigHandler: vi.fn(),
++    getActiveLeagueSchedule: vi.fn(),
++    isSubsessionPublished: vi.fn(),
++    loadUserIdsForChannel: vi.fn(),
++    getDataLakeDocument: vi.fn(),
++}));
++
++import { dtbrkrReadRoutes } from './dtbrkr-read.js';
++import {
++    userDataHandler,
++    userConfigHandler,
++    getActiveLeagueSchedule,
++    isSubsessionPublished,
++    loadUserIdsForChannel,
++    getDataLakeDocument,
++} from '../lplib/dtbrkr/index';
++
++const app = new Hono();
++app.route('/api', dtbrkrReadRoutes);
++
++function req(path: string) {
++    return app.request(`http://localhost/api${path}`);
++}
++
++beforeEach(() => {
++    vi.clearAllMocks();
++});
++
++// --- User Data Endpoints ---
++
++describe('GET /api/user/:userId/default-league-season', () => {
++    it('returns the default league and season for a user', async () => {
++        const mockData = { league_id: 6555, season_id: 99410 };
++        vi.mocked(userDataHandler).mockResolvedValue(mockData);
++
++        const res = await req('/user/user123/default-league-season');
++        expect(res.status).toBe(200);
++        expect(await res.json()).toEqual(mockData);
++        expect(userDataHandler).toHaveBeenCalledWith('ldata-usrdata', { type: 'defaultLeagueSeason', userID: 'user123' });
++    });
++});
++
++describe('GET /api/user/:userId/features', () => {
++    it('returns feature list for a user', async () => {
++        const mockData = ['feature_a', 'feature_b'];
++        vi.mocked(userDataHandler).mockResolvedValue(mockData);
++
++        const res = await req('/user/user456/features');
++        expect(res.status).toBe(200);
++        expect(await res.json()).toEqual(mockData);
++        expect(userDataHandler).toHaveBeenCalledWith('ldata-usrdata', { type: 'userFeatures', userID: 'user456' });
++    });
++});
++
++describe('GET /api/user/:userId/ir-link-state', () => {
++    it('returns iRacing link state for a user', async () => {
++        const mockData = { isVerified: true, irCustId: '12345', msgSent: false };
++        vi.mocked(userDataHandler).mockResolvedValue(mockData);
++
++        const res = await req('/user/user789/ir-link-state');
++        expect(res.status).toBe(200);
++        expect(await res.json()).toEqual(mockData);
++        expect(userDataHandler).toHaveBeenCalledWith('ldata-usrdata', { type: 'irLinkState', userID: 'user789' });
++    });
++});
++
++describe('GET /api/user/:userId/leagues', () => {
++    it('returns league interests for a user', async () => {
++        const mockData = [{ name: 'Test League', league_id: 6555, short_name: 'TL' }];
++        vi.mocked(userDataHandler).mockResolvedValue(mockData);
++
++        const res = await req('/user/user101/leagues');
++        expect(res.status).toBe(200);
++        expect(await res.json()).toEqual(mockData);
++        expect(userDataHandler).toHaveBeenCalledWith('ldata-usrdata', { type: 'userLeagues', userID: 'user101' });
++    });
++});
++
++describe('GET /api/user/:userId/context', () => {
++    it('returns context with no optional params', async () => {
++        const mockData = { league_id: 6555, season_id: 99410, subsession_id: 0 };
++        vi.mocked(userDataHandler).mockResolvedValue(mockData);
++
++        const res = await req('/user/user202/context');
++        expect(res.status).toBe(200);
++        expect(await res.json()).toEqual(mockData);
++        expect(userDataHandler).toHaveBeenCalledWith('ldata-usrdata', {
++            type: 'defLgSeasSubCtx',
++            userID: 'user202',
++            league: '',
++            season: '',
++            subsession: '',
++        });
++    });
++
++    it('passes league, season, and subsession query params', async () => {
++        const mockData = { league_id: 100, season_id: 200, subsession_id: 300 };
++        vi.mocked(userDataHandler).mockResolvedValue(mockData);
++
++        const res = await req('/user/user303/context?league=100&season=200&subsession=300');
++        expect(res.status).toBe(200);
++        expect(await res.json()).toEqual(mockData);
++        expect(userDataHandler).toHaveBeenCalledWith('ldata-usrdata', {
++            type: 'defLgSeasSubCtx',
++            userID: 'user303',
++            league: '100',
++            season: '200',
++            subsession: '300',
++        });
++    });
++});
++
++// --- Config Endpoints ---
++
++describe('GET /api/config/leagues/:leagueId/teams', () => {
++    it('returns teams info for a league', async () => {
++        const mockData = {
++            leageu_id: 6555,
++            seasons: [{ season_id: 1, teams: [{ team_name: 'Alpha', team_id: 1, team_members: [111] }] }],
++        };
++        vi.mocked(userConfigHandler).mockResolvedValue(mockData);
++
++        const res = await req('/config/leagues/6555/teams');
++        expect(res.status).toBe(200);
++        expect(await res.json()).toEqual(mockData);
++        expect(userConfigHandler).toHaveBeenCalledWith('ldata-usrcfg', { type: 'leagueTeamsInfo', league: '6555' });
++    });
++});
++
++describe('GET /api/config/active-league-schedule', () => {
++    it('returns active league schedule', async () => {
++        const mockData = { leagues: [{ league_id: 6555, name: 'Test', seasons: [] }] };
++        vi.mocked(getActiveLeagueSchedule).mockResolvedValue(mockData);
++
++        const res = await req('/config/active-league-schedule');
++        expect(res.status).toBe(200);
++        expect(await res.json()).toEqual(mockData);
++        expect(getActiveLeagueSchedule).toHaveBeenCalled();
++    });
++});
++
++describe('GET /api/config/tracks', () => {
++    it('returns track display info', async () => {
++        const mockData = { '123': { display: 'Daytona', short_display: 'DAY' } };
++        vi.mocked(userConfigHandler).mockResolvedValue(mockData);
++
++        const res = await req('/config/tracks');
++        expect(res.status).toBe(200);
++        expect(await res.json()).toEqual(mockData);
++        expect(userConfigHandler).toHaveBeenCalledWith('ldata-usrcfg', { type: 'trackDisplayInfo' });
++    });
++});
++
++describe('GET /api/config/context', () => {
++    it('returns config context with no params', async () => {
++        const mockData = { league_id: 6555, season_id: 99410, subsession_id: 0 };
++        vi.mocked(userConfigHandler).mockResolvedValue(mockData);
++
++        const res = await req('/config/context');
++        expect(res.status).toBe(200);
++        expect(await res.json()).toEqual(mockData);
++        expect(userConfigHandler).toHaveBeenCalledWith('ldata-usrcfg', {
++            type: 'defLgSeasSubCtx',
++            league: '',
++            season: '',
++            subsession: '',
++        });
++    });
++
++    it('passes query params', async () => {
++        const mockData = { league_id: 100, season_id: 200, subsession_id: 300 };
++        vi.mocked(userConfigHandler).mockResolvedValue(mockData);
++
++        const res = await req('/config/context?league=100&season=200&subsession=300');
++        expect(res.status).toBe(200);
++        expect(await res.json()).toEqual(mockData);
++        expect(userConfigHandler).toHaveBeenCalledWith('ldata-usrcfg', {
++            type: 'defLgSeasSubCtx',
++            league: '100',
++            season: '200',
++            subsession: '300',
++        });
++    });
++});
++
++// --- Publication Endpoints ---
++
++describe('GET /api/publications/:subsessionId/status', () => {
++    it('returns published true', async () => {
++        vi.mocked(isSubsessionPublished).mockResolvedValue(true);
++
++        const res = await req('/publications/12345/status');
++        expect(res.status).toBe(200);
++        expect(await res.json()).toEqual({ subsession_id: 12345, published: true });
++        expect(isSubsessionPublished).toHaveBeenCalledWith(12345);
++    });
++
++    it('returns published false', async () => {
++        vi.mocked(isSubsessionPublished).mockResolvedValue(false);
++
++        const res = await req('/publications/99999/status');
++        expect(res.status).toBe(200);
++        expect(await res.json()).toEqual({ subsession_id: 99999, published: false });
++    });
++
++    it('returns 400 for invalid subsession ID', async () => {
++        const res = await req('/publications/notanumber/status');
++        expect(res.status).toBe(400);
++        expect(await res.json()).toEqual({ error: 'Invalid subsession ID' });
++    });
++});
++
++// --- Channel Endpoints ---
++
++describe('GET /api/channels/:channelId/users', () => {
++    it('returns user IDs for a channel', async () => {
++        const mockData = { 'John Doe': '<@123>', 'Jane Smith': '<@456>' };
++        vi.mocked(loadUserIdsForChannel).mockResolvedValue(mockData);
++
++        const res = await req('/channels/ch999/users');
++        expect(res.status).toBe(200);
++        expect(await res.json()).toEqual(mockData);
++        expect(loadUserIdsForChannel).toHaveBeenCalledWith('ch999');
++    });
++});
++
++// --- Data Lake Endpoints ---
++
++describe('GET /api/datalake/:namespace/:type', () => {
++    it('returns data lake document', async () => {
++        const mockData = { sessions: [{ subsession_id: 1 }] };
++        vi.mocked(getDataLakeDocument).mockResolvedValue(mockData);
++
++        const res = await req('/datalake/ldata-irweb/leagueSeasonSessions?league=6555&season=99410');
++        expect(res.status).toBe(200);
++        expect(await res.json()).toEqual(mockData);
++        expect(getDataLakeDocument).toHaveBeenCalledWith({
++            namespace: 'ldata-irweb',
++            type: 'leagueSeasonSessions',
++            league: '6555',
++            season: '99410',
++        });
++    });
++
++    it('returns 404 when document not found', async () => {
++        vi.mocked(getDataLakeDocument).mockResolvedValue(null);
++
++        const res = await req('/datalake/ldata-irweb/nonexistent');
++        expect(res.status).toBe(404);
++        expect(await res.json()).toEqual({ error: 'Document not found' });
++    });
++
++    it('passes all optional params', async () => {
++        vi.mocked(getDataLakeDocument).mockResolvedValue({});
++
++        const res = await req(
++            '/datalake/ldata-rsltsts/singleMemberData?driver=123&car=456&track=789&sessionType=race&custId=111'
++        );
++        expect(res.status).toBe(200);
++        expect(getDataLakeDocument).toHaveBeenCalledWith({
++            namespace: 'ldata-rsltsts',
++            type: 'singleMemberData',
++            driver: '123',
++            car: '456',
++            track: '789',
++            sessionType: 'race',
++            custId: '111',
++        });
++    });
++});
+diff --git a/src/routes/dtbrkr-read.ts b/src/routes/dtbrkr-read.ts
+new file mode 100644
+index 0000000..52557eb
+--- /dev/null
++++ b/src/routes/dtbrkr-read.ts
+@@ -0,0 +1,128 @@
++import { Hono } from 'hono';
++// @ts-ignore - lplib uses extensionless imports, resolved at runtime by tsx
++import { userDataHandler, userConfigHandler, getActiveLeagueSchedule, isSubsessionPublished, loadUserIdsForChannel, getDataLakeDocument } from '../lplib/dtbrkr/index';
++
++export const dtbrkrReadRoutes = new Hono();
++
++// --- User Data Endpoints ---
++
++// GET /user/:userId/default-league-season
++dtbrkrReadRoutes.get('/user/:userId/default-league-season', async (c) => {
++    const userId = c.req.param('userId');
++    const data = await userDataHandler('ldata-usrdata', { type: 'defaultLeagueSeason', userID: userId });
++    return c.json(data);
++});
++
++// GET /user/:userId/features
++dtbrkrReadRoutes.get('/user/:userId/features', async (c) => {
++    const userId = c.req.param('userId');
++    const data = await userDataHandler('ldata-usrdata', { type: 'userFeatures', userID: userId });
++    return c.json(data);
++});
++
++// GET /user/:userId/ir-link-state
++dtbrkrReadRoutes.get('/user/:userId/ir-link-state', async (c) => {
++    const userId = c.req.param('userId');
++    const data = await userDataHandler('ldata-usrdata', { type: 'irLinkState', userID: userId });
++    return c.json(data);
++});
++
++// GET /user/:userId/leagues
++dtbrkrReadRoutes.get('/user/:userId/leagues', async (c) => {
++    const userId = c.req.param('userId');
++    const data = await userDataHandler('ldata-usrdata', { type: 'userLeagues', userID: userId });
++    return c.json(data);
++});
++
++// GET /user/:userId/context
++dtbrkrReadRoutes.get('/user/:userId/context', async (c) => {
++    const userId = c.req.param('userId');
++    const league = c.req.query('league') || '';
++    const season = c.req.query('season') || '';
++    const subsession = c.req.query('subsession') || '';
++    const data = await userDataHandler('ldata-usrdata', {
++        type: 'defLgSeasSubCtx',
++        userID: userId,
++        league,
++        season,
++        subsession,
++    });
++    return c.json(data);
++});
++
++// --- Config Endpoints ---
++
++// GET /config/leagues/:leagueId/teams
++dtbrkrReadRoutes.get('/config/leagues/:leagueId/teams', async (c) => {
++    const leagueId = c.req.param('leagueId');
++    const data = await userConfigHandler('ldata-usrcfg', { type: 'leagueTeamsInfo', league: leagueId });
++    return c.json(data);
++});
++
++// GET /config/active-league-schedule
++dtbrkrReadRoutes.get('/config/active-league-schedule', async (c) => {
++    const data = await getActiveLeagueSchedule();
++    return c.json(data);
++});
++
++// GET /config/tracks
++dtbrkrReadRoutes.get('/config/tracks', async (c) => {
++    const data = await userConfigHandler('ldata-usrcfg', { type: 'trackDisplayInfo' });
++    return c.json(data);
++});
++
++// GET /config/context
++dtbrkrReadRoutes.get('/config/context', async (c) => {
++    const league = c.req.query('league') || '';
++    const season = c.req.query('season') || '';
++    const subsession = c.req.query('subsession') || '';
++    const data = await userConfigHandler('ldata-usrcfg', {
++        type: 'defLgSeasSubCtx',
++        league,
++        season,
++        subsession,
++    });
++    return c.json(data);
++});
++
++// --- Publication Endpoints ---
++
++// GET /publications/:subsessionId/status
++dtbrkrReadRoutes.get('/publications/:subsessionId/status', async (c) => {
++    const subsessionId = Number.parseInt(c.req.param('subsessionId'), 10);
++    if (isNaN(subsessionId)) {
++        return c.json({ error: 'Invalid subsession ID' }, 400);
++    }
++    const published = await isSubsessionPublished(subsessionId);
++    return c.json({ subsession_id: subsessionId, published });
++});
++
++// --- Channel Endpoints ---
++
++// GET /channels/:channelId/users
++dtbrkrReadRoutes.get('/channels/:channelId/users', async (c) => {
++    const channelId = c.req.param('channelId');
++    const data = await loadUserIdsForChannel(channelId);
++    return c.json(data);
++});
++
++// --- Data Lake Endpoints ---
++
++// GET /datalake/:namespace/:type
++dtbrkrReadRoutes.get('/datalake/:namespace/:type', async (c) => {
++    const namespace = c.req.param('namespace');
++    const type = c.req.param('type');
++    const query: { [name: string]: string } = { namespace, type };
++
++    const optionalParams = ['league', 'season', 'subsession', 'simsession', 'driver', 'car', 'track', 'sessionType', 'custId'];
++    for (const param of optionalParams) {
++        const value = c.req.query(param);
++        if (value) query[param] = value;
++    }
++
++    const data = await getDataLakeDocument(query);
++    if (data === null) {
++        return c.json({ error: 'Document not found' }, 404);
++    }
++    return c.json(data);
++});
