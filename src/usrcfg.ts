@@ -1,6 +1,7 @@
 import { getDocument as getDataLakeDocument } from './dtlkdata';
 import { getActiveLeagueSchedule } from './lib-usrcfg/active-league-schedule';
 import { sql } from './db';
+import { isValidSeason, isValidLeague } from './valid-util';
 
 async function getLeagueTeamsInfo(league: string): Promise<any> {
     console.log('::: getLeagueTeamsInfo():', league);
@@ -62,34 +63,6 @@ async function getTrackDisplayInfo(): Promise<any> {
     return ret;
 }
 
-async function isValidSeason(season: string): Promise<number> {
-    console.log(':::: isValidSeason()');
-    const season_id = Number.parseInt(season, 10);
-    if (isNaN(season_id)) {
-        return 0;
-    }
-
-    const { records } = await sql`
-        SELECT "league_id"
-        FROM "seasons"
-        WHERE "season_id"=${season_id}`;
-
-    return records.length > 0 ? (<any>records)[0].league_id : 0;
-}
-
-async function isValidLeague(league: string): Promise<boolean> {
-    const league_id = Number.parseInt(league, 10);
-    if (isNaN(league_id)) {
-        return false;
-    }
-
-    const { records } = await sql`
-        SELECT "season_id"
-        FROM "seasons"
-        WHERE "league_id"=${league_id}`;
-
-    return records.length > 0;
-}
 
 async function defLgSeasSubCtx_noParams(): Promise<any> {
     console.log(':::: defLgSeasSubCtx_noParams()');
@@ -215,7 +188,7 @@ async function defLgSeasSubCtx_forSeason(
 ): Promise<any> {
     console.log(':::: defLgSeasSubCtx_forSeason()');
 
-    if ((await isValidSeason(season)) === 0) {
+    if ((await isValidSeason(league, season)) === 0) {
         return defLgSeasSubCtx_forLeague(league);
     }
 
@@ -241,19 +214,22 @@ async function defLgSeasSubCtx_forSeason(
     const futRecs: any = p1.records[0];
     const pasRecs: any = p2.records[0];
 
-    let ret: any = [];
+    let ret: any = {};
 
     if (!futRecs && !pasRecs) {
-        return await defLgSeasSubCtx_forLeague(league);
-    } else if (!futRecs) {
+        // we couldn't find any scheduled events but
+        // we can trust the result from isValidSeason
+        ret.league_id = league;
+        ret.season_id = season;
+    } else if (!futRecs && pasRecs) {
         ret = pasRecs;
-    } else if (!pasRecs) {
+    } else if (!pasRecs && futRecs) {
         ret = futRecs;
     } else {
         const now = new Date().getTime();
         ret =
             new Date(futRecs.time).getTime() - now <
-            now - new Date(pasRecs.time).getTime()
+                now - new Date(pasRecs.time).getTime()
                 ? futRecs
                 : pasRecs;
     }
