@@ -1,0 +1,22 @@
+{
+  "18": {
+    "short_display": "RA",
+    "display": "Road America"
+  },
+  "108": {
+    "short_display": "GLEN",
+    "display": "[Retired] Watkins Glen International"
+  },
+  "127": {
+    "short_display": "RATL",
+    "display": "Road Atlanta"
+  },
+  "149": {
+    "display": "Circuit Park Zandvoort",
+    "short_display": "ZAN"
+  },
+  "485": {
+    "display": "Circuit Park Zandvoort",
+    "short_display": "ZAN"
+  }
+}

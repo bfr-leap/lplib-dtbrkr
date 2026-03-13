@@ -1,0 +1,46 @@
+[
+  {
+    "season_id": 114141,
+    "season_title": "SFL - 2025 Season 1",
+    "sessions": [
+      {
+        "session_id": 259713721,
+        "subsession_id": 73536735,
+        "session_title": "Circuit de Barcelona Catalunya - Super Formula Lights",
+        "simsessions": [
+          {
+            "simsession_id": 0,
+            "type": "race"
+          },
+          {
+            "simsession_id": -1,
+            "type": "qualify"
+          },
+          {
+            "simsession_id": -2,
+            "type": "practice"
+          }
+        ]
+      },
+      {
+        "session_id": 260474779,
+        "subsession_id": 73713840,
+        "session_title": "Virginia International Raceway - Super Formula Lights",
+        "simsessions": [
+          {
+            "simsession_id": 0,
+            "type": "race"
+          },
+          {
+            "simsession_id": -1,
+            "type": "qualify"
+          },
+          {
+            "simsession_id": -2,
+            "type": "practice"
+          }
+        ]
+      }
+    ]
+  }
+]

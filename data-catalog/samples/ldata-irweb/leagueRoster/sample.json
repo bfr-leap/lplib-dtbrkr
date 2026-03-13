@@ -1,0 +1,43 @@
+{
+  "private_roster": false,
+  "roster": [
+    {
+      "cust_id": 105603,
+      "display_name": "Luca Varani",
+      "helmet": {
+        "pattern": 20,
+        "color1": "5efe7d",
+        "color2": "41e793",
+        "color3": "41e793",
+        "face_type": 0,
+        "helmet_type": 0
+      },
+      "owner": true,
+      "admin": true,
+      "league_mail_opt_out": false,
+      "league_pm_opt_out": false,
+      "league_member_since": "2013-05-01T04:55:03Z",
+      "car_number": "222",
+      "nick_name": "Luca Varani"
+    },
+    {
+      "cust_id": 367893,
+      "display_name": "Andy Flint",
+      "helmet": {
+        "pattern": 49,
+        "color1": "121116",
+        "color2": "ffffff",
+        "color3": "debb1d",
+        "face_type": 0,
+        "helmet_type": 0
+      },
+      "owner": false,
+      "admin": true,
+      "league_mail_opt_out": true,
+      "league_pm_opt_out": false,
+      "league_member_since": "2019-10-01T23:50:37Z",
+      "car_number": "13",
+      "nick_name": null
+    }
+  ]
+}

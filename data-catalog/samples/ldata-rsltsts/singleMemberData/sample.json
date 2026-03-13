@@ -1,0 +1,77 @@
+{
+  "cust_id": 774207,
+  "display_name": "Edson Jose Santos",
+  "helmet": {
+    "pattern": 36,
+    "color1": "354bde",
+    "color2": "f60b42",
+    "color3": "7eb3eb",
+    "face_type": 4,
+    "helmet_type": 0
+  },
+  "last_login": "2024-02-29T18:20:12.667560552Z",
+  "member_since": "2022-04-29",
+  "club_id": 45,
+  "club_name": "Brazil",
+  "ai": false,
+  "licenses": [
+    {
+      "category_id": 1,
+      "category": "oval",
+      "license_level": 20,
+      "safety_rating": 4.97,
+      "cpi": 133.83298,
+      "irating": 5076,
+      "tt_rating": 1091,
+      "mpr_num_races": 0,
+      "color": "0153db",
+      "group_name": "Class A",
+      "group_id": 5,
+      "pro_promotable": false,
+      "mpr_num_tts": 0
+    },
+    {
+      "category_id": 2,
+      "category": "road",
+      "license_level": 15,
+      "safety_rating": 3.44,
+      "cpi": 44.257473,
+      "irating": 1144,
+      "tt_rating": 1123,
+      "mpr_num_races": 0,
+      "color": "00c702",
+      "group_name": "Class B",
+      "group_id": 4,
+      "pro_promotable": false,
+      "mpr_num_tts": 0
+    },
+    {
+      "category_id": 3,
+      "category": "dirt_oval",
+      "license_level": 2,
+      "safety_rating": 2.5,
+      "cpi": 10.10941,
+      "tt_rating": 1350,
+      "mpr_num_races": 0,
+      "color": "fc0706",
+      "group_name": "Rookie",
+      "group_id": 1,
+      "pro_promotable": false,
+      "mpr_num_tts": 0
+    },
+    {
+      "category_id": 4,
+      "category": "dirt_road",
+      "license_level": 2,
+      "safety_rating": 2.5,
+      "cpi": 10.10941,
+      "tt_rating": 1350,
+      "mpr_num_races": 0,
+      "color": "fc0706",
+      "group_name": "Rookie",
+      "group_id": 1,
+      "pro_promotable": false,
+      "mpr_num_tts": 0
+    }
+  ]
+}

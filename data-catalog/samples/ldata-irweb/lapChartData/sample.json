@@ -1,0 +1,98 @@
+{
+  "success": true,
+  "session_info": {
+    "subsession_id": 41406964,
+    "session_id": 161624488,
+    "simsession_number": 0,
+    "simsession_type": 3,
+    "simsession_name": "PRACTICE",
+    "num_laps_for_qual_average": 1,
+    "num_laps_for_solo_average": 1,
+    "event_type": 5,
+    "event_type_name": "Race",
+    "private_session_id": 2518008,
+    "season_name": "Hosted iRacing",
+    "season_short_name": "Hosted iRacing",
+    "series_name": "Hosted iRacing",
+    "series_short_name": "Hosted iRacing",
+    "session_name": "iFormula League",
+    "restrict_results": false,
+    "start_time": "2021-10-02T22:00:24Z",
+    "track": {
+      "track_id": 229,
+      "track_name": "Circuit of the Americas",
+      "config_name": "Grand Prix"
+    }
+  },
+  "best_lap_num": 4,
+  "best_lap_time": 1166129,
+  "best_nlaps_num": -1,
+  "best_nlaps_time": -1,
+  "best_qual_lap_num": -1,
+  "best_qual_lap_time": -1,
+  "best_qual_lap_at": null,
+  "chunk_info": [
+    {
+      "group_id": 230298,
+      "name": "Katelyn Heydt",
+      "cust_id": 230298,
+      "display_name": "Katelyn Heydt",
+      "lap_number": 0,
+      "flags": 2,
+      "incident": false,
+      "session_time": 30950250,
+      "session_start_time": null,
+      "lap_time": -1,
+      "team_fastest_lap": false,
+      "personal_best_lap": false,
+      "helmet": {
+        "pattern": 42,
+        "color1": "a50062",
+        "color2": "000000",
+        "color3": "d461a6",
+        "face_type": 0,
+        "helmet_type": 0
+      },
+      "license_level": 0,
+      "car_number": "55",
+      "lap_events": [
+        "pitted"
+      ],
+      "lap_position": 1,
+      "interval": null,
+      "interval_units": null,
+      "fastest_lap": false,
+      "ai": false
+    },
+    {
+      "group_id": 230298,
+      "name": "Katelyn Heydt",
+      "cust_id": 230298,
+      "display_name": "Katelyn Heydt",
+      "lap_number": 1,
+      "flags": 0,
+      "incident": false,
+      "session_time": 32131982,
+      "session_start_time": null,
+      "lap_time": 1181732,
+      "team_fastest_lap": false,
+      "personal_best_lap": false,
+      "helmet": {
+        "pattern": 42,
+        "color1": "a50062",
+        "color2": "000000",
+        "color3": "d461a6",
+        "face_type": 0,
+        "helmet_type": 0
+      },
+      "license_level": 0,
+      "car_number": "55",
+      "lap_events": [],
+      "lap_position": 1,
+      "interval": null,
+      "interval_units": null,
+      "fastest_lap": false,
+      "ai": false
+    }
+  ]
+}

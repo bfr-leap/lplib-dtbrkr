@@ -1,0 +1,26 @@
+{
+  "league_id": 637,
+  "seasons": [
+    {
+      "season_id": 95908,
+      "teams": [
+        {
+          "team_name": "Hydrorace Racing Forces",
+          "team_id": 1,
+          "team_members": [
+            286368,
+            482130
+          ]
+        },
+        {
+          "team_name": "No Limits Simracing",
+          "team_id": 2,
+          "team_members": [
+            586600,
+            275038
+          ]
+        }
+      ]
+    }
+  ]
+}

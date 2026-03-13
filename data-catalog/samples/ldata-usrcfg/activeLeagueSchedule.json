@@ -1,0 +1,29 @@
+{
+  "leagues": [
+    {
+      "league_id": 6555,
+      "name": "iFormula League",
+      "journalistStyleName": "Peter Windsor",
+      "journalistFineTunning": "Use clear and simple language. Stay away from poetic language and stick to the facts. Focus on the most significant moments and drivers. Start with the race's beginning, move through the middle, and conclude with the end. Highlight key turning points and pivotal moments. Ensure a balanced focus on important drivers and events. Avoid redundant descriptions and repetition. Clearly link events and strategies to their outcomes in the race. Explain the significance of key moments and how they impact the overall narrative. Keep introductory and conclusion paragraphs succinct",
+      "seasons": [
+        {
+          "season_id": 99410,
+          "car_id": 106,
+          "comment": "ifl SF23",
+          "events": [
+            {
+              "time": "January 13 2024 11:00:00 UTC-0500",
+              "track_id": -1,
+              "comment": "Silverstone"
+            },
+            {
+              "time": "January 20 2024 11:00:00 UTC-0500",
+              "track_id": -1,
+              "comment": "Hungaroring"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+[
+  {
+    "name": "Leigh Aberdeen",
+    "pace": 0,
+    "ideal": -0.3750861060659787,
+    "possible improvement": 0,
+    "position": 1
+  },
+  {
+    "name": "Niklas Wessman",
+    "pace": 0.12,
+    "ideal": -0.049173668569466145,
+    "possible improvement": 1,
+    "position": 2
+  },
+  {
+    "name": "Greg Seitz",
+    "pace": 0.15,
+    "ideal": -0.30990361856669324,
+    "possible improvement": 2,
+    "position": 3
+  }
+]

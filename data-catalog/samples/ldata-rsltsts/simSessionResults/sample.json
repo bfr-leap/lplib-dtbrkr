@@ -1,0 +1,19 @@
+{
+  "subsession_id": 42455598,
+  "simsession_number": 0,
+  "results": [
+    {
+      "cust_id": 312032,
+      "position": 1,
+      "start_position": 1,
+      "interval": -1,
+      "avg_lap_time": -1,
+      "fastest_lap_time": 184336,
+      "fast_lap": 6,
+      "laps_completed": 6,
+      "points": 0,
+      "incidents": 7,
+      "pace_percent": 0
+    }
+  ]
+}
