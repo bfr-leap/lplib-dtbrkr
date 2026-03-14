@@ -7,3 +7,5 @@ export { getDocument as getDataLakeDocument } from './dtlkdata';
 
 export { createRawMessageIngest, loadUserIdsForChannel, deleteAllRawMessageIngest } from './msgingest';
 export { createPublication, isSubsessionPublished } from './publications';
+
+export { adminConfigHandler } from './admcfg';
