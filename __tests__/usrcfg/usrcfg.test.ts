@@ -125,6 +125,47 @@ describe('userConfigHandler', () => {
             expect(result.season_id).toBeDefined();
         });
 
+        test('returns the exact subsession_id when it is at index 0 in sessions array', async () => {
+            // 9001 is the first element (index 0) in the mocked sessions array.
+            // This test guards against an off-by-one bug where indexOf() > 0
+            // would incorrectly reject the subsession at index 0.
+            const result = await userConfigHandler('ldata-usrcfg', {
+                type: 'defLgSeasSubCtx',
+                league: '4534',
+                season: '105035',
+                subsession: '9001',
+            });
+
+            expect(result).toBeDefined();
+            expect(result.subsession_id).toBe(9001);
+        });
+
+        test('returns the exact subsession_id when it is at a non-zero index', async () => {
+            const result = await userConfigHandler('ldata-usrcfg', {
+                type: 'defLgSeasSubCtx',
+                league: '4534',
+                season: '105035',
+                subsession: '9002',
+            });
+
+            expect(result).toBeDefined();
+            expect(result.subsession_id).toBe(9002);
+        });
+
+        test('falls back when subsession is not in the sessions array', async () => {
+            const result = await userConfigHandler('ldata-usrcfg', {
+                type: 'defLgSeasSubCtx',
+                league: '4534',
+                season: '105035',
+                subsession: '99999',
+            });
+
+            expect(result).toBeDefined();
+            // Should fall back to defLgSeasSubCtx_forSeason, so subsession_id
+            // will NOT be 99999 — it will be resolved from the data lake doc
+            expect(result.subsession_id).not.toBe(99999);
+        });
+
         test('returns context with no params (empty strings)', async () => {
             const result = await userConfigHandler('ldata-usrcfg', {
                 type: 'defLgSeasSubCtx',

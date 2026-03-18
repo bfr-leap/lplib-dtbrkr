@@ -227,5 +227,48 @@ describe('usrdata', () => {
             // Should return an object (may be empty if no data matches)
             expect(typeof result === 'object').toBe(true);
         });
+
+        test('defLgSeasSubCtx returns exact subsession_id at index 0 in sessions array', async () => {
+            // 8001 is the first element (index 0) in the mocked sessions array.
+            // This test guards against an off-by-one bug where indexOf() > 0
+            // would incorrectly reject the subsession at index 0.
+            const result = await userDataHandler('ldata-usrdata', {
+                type: 'defLgSeasSubCtx',
+                userID: 'any_user',
+                league: '4534',
+                season: '105035',
+                subsession: '8001',
+            });
+
+            expect(result).toBeDefined();
+            expect(result.subsession_id).toBe(8001);
+        });
+
+        test('defLgSeasSubCtx returns exact subsession_id at a non-zero index', async () => {
+            const result = await userDataHandler('ldata-usrdata', {
+                type: 'defLgSeasSubCtx',
+                userID: 'any_user',
+                league: '4534',
+                season: '105035',
+                subsession: '8002',
+            });
+
+            expect(result).toBeDefined();
+            expect(result.subsession_id).toBe(8002);
+        });
+
+        test('defLgSeasSubCtx falls back when subsession is not in sessions array', async () => {
+            const result = await userDataHandler('ldata-usrdata', {
+                type: 'defLgSeasSubCtx',
+                userID: 'any_user',
+                league: '4534',
+                season: '105035',
+                subsession: '99999',
+            });
+
+            expect(result).toBeDefined();
+            // Should fall back — subsession_id will NOT be 99999
+            expect(result.subsession_id).not.toBe(99999);
+        });
     });
 });

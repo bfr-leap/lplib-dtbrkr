@@ -425,7 +425,7 @@ async function defLgSeasSubCtx_forSubsession(
     const subsessionFound =
         dlDoc?.sessions
             ?.map((s: any) => s?.subsession_id)
-            ?.indexOf(subsession_id) > 0;
+            ?.includes(subsession_id);
 
     if (!subsessionFound) {
         return await defLgSeasSubCtx_forSeason(userID, league, season);
