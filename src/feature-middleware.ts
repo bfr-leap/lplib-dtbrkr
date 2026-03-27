@@ -9,6 +9,7 @@ export async function featureMiddleware(
 
     for (let requiredFeature of requiredFeatures) {
         if (features.indexOf(requiredFeature) < 0) {
+            console.log('::: featureMiddleware() denied:', userID, 'missing feature:', requiredFeature);
             return undefined;
         }
     }
