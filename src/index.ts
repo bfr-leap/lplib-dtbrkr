@@ -6,6 +6,6 @@ export { getDocument } from './ftchdata';
 export { getDocument as getDataLakeDocument } from './dtlkdata';
 
 export { createRawMessageIngest, loadUserIdsForChannel, deleteAllRawMessageIngest } from './msgingest';
-export { createPublication, isSubsessionPublished } from './publications';
+export { createPublication, isSubsessionPublished, createDotdPublication, isDotdPublished } from './publications';
 
 export { adminConfigHandler } from './admcfg';

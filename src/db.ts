@@ -130,6 +130,13 @@ function initSchema(db: Database.Database): void {
             channel_id TEXT,
             subsession_id INTEGER
         );
+
+        CREATE TABLE IF NOT EXISTS tracktalk_dotd_publications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            channel_id TEXT,
+            subsession_id INTEGER,
+            cust_id INTEGER
+        );
     `);
 }
 
