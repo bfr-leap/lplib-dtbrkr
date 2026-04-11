@@ -12,11 +12,12 @@ import { sql } from './db';
 // never have to maintain aggregate indexes in the data lake.
 //
 // License-point tallies are deliberately NOT stored — consumers compute them
-// at read time by walking the returned `sanctions[]` arrays.
+// at read time by summing each ruling's `license_points` (or walking the
+// `sanctions[]` arrays).
 
 async function fetchLeagueSeasonRulings(
-    league: number | string,
-    season: number | string
+    league: string,
+    season: string
 ): Promise<StewardRuling[]> {
     const doc = await getDataLakeDocument({
         namespace: 'ldata-stward',
@@ -34,17 +35,17 @@ async function fetchLeagueSeasonRulings(
 }
 
 export async function getAllRulings(
-    league: number | string,
-    season: number | string
+    league: string,
+    season: string
 ): Promise<StewardRuling[]> {
     console.log('::: getAllRulings():', league, season);
     return await fetchLeagueSeasonRulings(league, season);
 }
 
 export async function getRulingsByDriver(
-    league: number | string,
-    season: number | string,
-    driver: { discord_user_id?: string; driver_id?: number }
+    league: string,
+    season: string,
+    driver: { discord_user_id?: string; driver_id?: string }
 ): Promise<StewardRuling[]> {
     console.log('::: getRulingsByDriver():', league, season, driver);
     const all = await fetchLeagueSeasonRulings(league, season);
@@ -60,8 +61,8 @@ export async function getRulingsByDriver(
 }
 
 export async function getRulingsBySessionType(
-    league: number | string,
-    season: number | string,
+    league: string,
+    season: string,
     session_type: string
 ): Promise<StewardRuling[]> {
     console.log('::: getRulingsBySessionType():', league, season, session_type);
@@ -78,7 +79,7 @@ export async function getRulingsBySessionType(
 // layer writes to at runtime.
 
 export async function getStewardConfig(
-    league_id: number
+    league_id: string
 ): Promise<StewardConfig | null> {
     console.log('::: getStewardConfig():', league_id);
     const { records } = await sql`
@@ -91,13 +92,13 @@ export async function getStewardConfig(
     if (!rec) return null;
 
     return {
-        league_id: rec.league_id,
+        league_id: String(rec.league_id),
         race_control_channel_id: rec.race_control_channel_id ?? null,
     };
 }
 
 export async function setRaceControlChannelId(
-    league_id: number,
+    league_id: string,
     race_control_channel_id: string | null
 ): Promise<void> {
     console.log(
@@ -124,28 +125,32 @@ export async function stewardHandler(
     console.log(':: stewardHandler():', query?.type);
 
     const q = query || {};
+    const league = q.league !== undefined ? String(q.league) : '';
+    const season = q.season !== undefined ? String(q.season) : '';
+
     switch (q.type) {
         case 'rulings':
-            return await getAllRulings(q.league, q.season);
+            return await getAllRulings(league, season);
         case 'rulingsByDriver':
-            return await getRulingsByDriver(q.league, q.season, {
+            return await getRulingsByDriver(league, season, {
                 discord_user_id: q.discord_user_id,
-                driver_id: q.driver_id,
+                driver_id:
+                    q.driver_id !== undefined ? String(q.driver_id) : undefined,
             });
         case 'rulingsBySessionType':
             return await getRulingsBySessionType(
-                q.league,
-                q.season,
+                league,
+                season,
                 q.sessionType || q.session_type
             );
         case 'stewardConfig':
-            return await getStewardConfig(Number.parseInt(q.league, 10));
+            return await getStewardConfig(league);
         case 'setRaceControlChannelId':
             await setRaceControlChannelId(
-                Number.parseInt(q.league, 10),
+                league,
                 q.race_control_channel_id ?? null
             );
-            return await getStewardConfig(Number.parseInt(q.league, 10));
+            return await getStewardConfig(league);
     }
 
     return null;

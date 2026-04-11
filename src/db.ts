@@ -139,7 +139,7 @@ function initSchema(db: Database.Database): void {
         );
 
         CREATE TABLE IF NOT EXISTS steward_config (
-            league_id INTEGER PRIMARY KEY,
+            league_id TEXT PRIMARY KEY,
             race_control_channel_id TEXT
         );
     `);

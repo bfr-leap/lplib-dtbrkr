@@ -13,47 +13,67 @@ global.fetch = mockFetch as any;
 
 const sampleRulings = [
     {
-        id: 'r1',
-        league_id: 4534,
-        season_id: 105035,
-        subsession_id: 77001,
-        session_type: 'race',
+        ruling_id: 'discord-1001',
         discord_user_id: 'discord-abc',
-        driver_id: 111,
-        issued_at: '2026-01-01T00:00:00.000Z',
-        summary: 'Causing a collision',
+        driver_id: '111',
+        league_id: '4534',
+        season_id: '105035',
+        session_type: 'Feature Race',
+        lap: 12,
+        classification: 'Major',
+        infraction: 'Causing a collision',
+        license_points: 4,
         sanctions: [
-            { type: 'license_points', license_points: 4, reason: 'contact' },
-            { type: 'grid_penalty', details: '3-place next race' },
+            {
+                description: '5 point deduction',
+                type: 'championship_point_deduction',
+                value: 5,
+            },
         ],
+        evidence_urls: [],
+        steward_notes: null,
+        source_message_id: 'msg-1001',
+        ruling_date: '2026-01-01',
     },
     {
-        id: 'r2',
-        league_id: 4534,
-        season_id: 105035,
-        subsession_id: 77002,
-        session_type: 'qualify',
+        ruling_id: 'discord-1002',
         discord_user_id: 'discord-def',
-        driver_id: 222,
-        issued_at: '2026-01-02T00:00:00.000Z',
-        summary: 'Track limits',
+        driver_id: '222',
+        league_id: '4534',
+        season_id: '105035',
+        session_type: 'Qualifying',
+        lap: null,
+        classification: 'Minor',
+        infraction: 'Track limits',
+        license_points: 1,
         sanctions: [
-            { type: 'license_points', license_points: 1, reason: 'track limits' },
+            {
+                description: '3 place grid penalty',
+                type: 'time_penalty',
+                value: 3,
+            },
         ],
+        evidence_urls: [],
+        steward_notes: null,
+        source_message_id: 'msg-1002',
+        ruling_date: '2026-01-02',
     },
     {
-        id: 'r3',
-        league_id: 4534,
-        season_id: 105035,
-        subsession_id: 77003,
-        session_type: 'race',
+        ruling_id: 'discord-1003',
         discord_user_id: 'discord-abc',
-        driver_id: 111,
-        issued_at: '2026-01-03T00:00:00.000Z',
-        summary: 'Unsafe rejoin',
-        sanctions: [
-            { type: 'warning' },
-        ],
+        driver_id: '111',
+        league_id: '4534',
+        season_id: '105035',
+        session_type: 'Feature Race',
+        lap: 20,
+        classification: 'Minor',
+        infraction: 'Unsafe rejoin',
+        license_points: 1,
+        sanctions: [],
+        evidence_urls: [],
+        steward_notes: null,
+        source_message_id: 'msg-1003',
+        ruling_date: '2026-01-03',
     },
 ];
 
@@ -71,9 +91,12 @@ describe('stward - data lake accessors', () => {
     describe('getAllRulings', () => {
         test('returns rulings array when dataset is a bare array', async () => {
             mockStwardFetch(sampleRulings);
-            const result = await getAllRulings(4534, 105035);
+            const result = await getAllRulings('4534', '105035');
             expect(result).toHaveLength(3);
-            expect(result[0].sanctions[0].license_points).toBe(4);
+            expect(result[0].license_points).toBe(4);
+            expect(result[0].sanctions[0].type).toBe(
+                'championship_point_deduction'
+            );
 
             const calledUrl = mockFetch.mock.calls[0][0] as string;
             expect(calledUrl).toContain('ldata-stward');
@@ -84,13 +107,13 @@ describe('stward - data lake accessors', () => {
 
         test('unwraps { rulings: [...] } wrapper', async () => {
             mockStwardFetch({ rulings: sampleRulings });
-            const result = await getAllRulings(4534, 105035);
+            const result = await getAllRulings('4534', '105035');
             expect(result).toHaveLength(3);
         });
 
         test('returns empty array when fetch returns null', async () => {
             mockFetch.mockRejectedValueOnce(new Error('not found'));
-            const result = await getAllRulings(4534, 105035);
+            const result = await getAllRulings('4534', '105035');
             expect(result).toEqual([]);
         });
     });
@@ -98,25 +121,28 @@ describe('stward - data lake accessors', () => {
     describe('getRulingsByDriver', () => {
         test('filters by discord_user_id', async () => {
             mockStwardFetch(sampleRulings);
-            const result = await getRulingsByDriver(4534, 105035, {
+            const result = await getRulingsByDriver('4534', '105035', {
                 discord_user_id: 'discord-abc',
             });
             expect(result).toHaveLength(2);
-            expect(result.map((r) => r.id)).toEqual(['r1', 'r3']);
+            expect(result.map((r) => r.ruling_id)).toEqual([
+                'discord-1001',
+                'discord-1003',
+            ]);
         });
 
         test('filters by driver_id when discord_user_id not provided', async () => {
             mockStwardFetch(sampleRulings);
-            const result = await getRulingsByDriver(4534, 105035, {
-                driver_id: 222,
+            const result = await getRulingsByDriver('4534', '105035', {
+                driver_id: '222',
             });
             expect(result).toHaveLength(1);
-            expect(result[0].id).toBe('r2');
+            expect(result[0].ruling_id).toBe('discord-1002');
         });
 
         test('returns empty array when neither id matches', async () => {
             mockStwardFetch(sampleRulings);
-            const result = await getRulingsByDriver(4534, 105035, {
+            const result = await getRulingsByDriver('4534', '105035', {
                 discord_user_id: 'nobody',
             });
             expect(result).toEqual([]);
@@ -126,17 +152,24 @@ describe('stward - data lake accessors', () => {
     describe('getRulingsBySessionType', () => {
         test('filters by session_type', async () => {
             mockStwardFetch(sampleRulings);
-            const result = await getRulingsBySessionType(4534, 105035, 'race');
+            const result = await getRulingsBySessionType(
+                '4534',
+                '105035',
+                'Feature Race'
+            );
             expect(result).toHaveLength(2);
-            expect(result.map((r) => r.id)).toEqual(['r1', 'r3']);
+            expect(result.map((r) => r.ruling_id)).toEqual([
+                'discord-1001',
+                'discord-1003',
+            ]);
         });
 
         test('returns empty array when no rulings match session type', async () => {
             mockStwardFetch(sampleRulings);
             const result = await getRulingsBySessionType(
-                4534,
-                105035,
-                'practice'
+                '4534',
+                '105035',
+                'Practice'
             );
             expect(result).toEqual([]);
         });
@@ -144,7 +177,7 @@ describe('stward - data lake accessors', () => {
 });
 
 describe('stward - steward_config accessors', () => {
-    const testLeague = 919191;
+    const testLeague = '919191';
 
     afterEach(async () => {
         await sql`DELETE FROM steward_config WHERE league_id = ${testLeague}`;
@@ -200,7 +233,7 @@ describe('stward - steward_config accessors', () => {
 });
 
 describe('stward - stewardHandler', () => {
-    const testLeague = 828282;
+    const testLeague = '828282';
 
     beforeEach(() => {
         mockFetch.mockReset();
@@ -214,8 +247,8 @@ describe('stward - stewardHandler', () => {
         mockStwardFetch(sampleRulings);
         const result = await stewardHandler('ldata-stward', {
             type: 'rulings',
-            league: 4534,
-            season: 105035,
+            league: '4534',
+            season: '105035',
         });
         expect(result).toHaveLength(3);
     });
@@ -224,8 +257,8 @@ describe('stward - stewardHandler', () => {
         mockStwardFetch(sampleRulings);
         const result = await stewardHandler('ldata-stward', {
             type: 'rulingsByDriver',
-            league: 4534,
-            season: 105035,
+            league: '4534',
+            season: '105035',
             discord_user_id: 'discord-abc',
         });
         expect(result).toHaveLength(2);
@@ -235,19 +268,19 @@ describe('stward - stewardHandler', () => {
         mockStwardFetch(sampleRulings);
         const result = await stewardHandler('ldata-stward', {
             type: 'rulingsBySessionType',
-            league: 4534,
-            season: 105035,
-            sessionType: 'qualify',
+            league: '4534',
+            season: '105035',
+            sessionType: 'Qualifying',
         });
         expect(result).toHaveLength(1);
-        expect(result[0].id).toBe('r2');
+        expect(result[0].ruling_id).toBe('discord-1002');
     });
 
     test('routes "stewardConfig" to getStewardConfig', async () => {
         await setRaceControlChannelId(testLeague, 'ch-abc');
         const result = await stewardHandler('ldata-stward', {
             type: 'stewardConfig',
-            league: String(testLeague),
+            league: testLeague,
         });
         expect(result).not.toBeNull();
         expect(result.race_control_channel_id).toBe('ch-abc');
@@ -256,7 +289,7 @@ describe('stward - stewardHandler', () => {
     test('routes "setRaceControlChannelId" and returns updated config', async () => {
         const result = await stewardHandler('ldata-stward', {
             type: 'setRaceControlChannelId',
-            league: String(testLeague),
+            league: testLeague,
             race_control_channel_id: 'rc-channel',
         });
         expect(result).not.toBeNull();
