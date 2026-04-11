@@ -137,6 +137,11 @@ function initSchema(db: Database.Database): void {
             subsession_id INTEGER,
             cust_id INTEGER
         );
+
+        CREATE TABLE IF NOT EXISTS steward_config (
+            league_id TEXT PRIMARY KEY,
+            race_control_channel_id TEXT
+        );
     `);
 }
 

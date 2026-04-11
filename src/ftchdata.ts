@@ -2,6 +2,7 @@ import { getDocument as getDataLakeDocument } from './dtlkdata';
 import { userDataHandler } from './usrdata';
 import { userConfigHandler } from './usrcfg';
 import { adminConfigHandler } from './admcfg';
+import { stewardHandler } from './stward';
 
 type Query = { [name: string]: number | string };
 type Middleware = (
@@ -42,6 +43,12 @@ export async function getDocument(
         let endTime = Date.now();
         console.log(`${namespace}::${query.type} - ${endTime - startTime}`);
         return await userConfigHandler(namespace, query);
+    }
+
+    if ('ldata-stward' === namespace) {
+        let endTime = Date.now();
+        console.log(`${namespace}::${query.type} - ${endTime - startTime}`);
+        return await stewardHandler(namespace, query);
     }
 
     let ret = await getDataLakeDocument(query);
