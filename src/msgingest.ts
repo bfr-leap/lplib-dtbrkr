@@ -1,5 +1,21 @@
 import { sql } from './db';
 
+// NOTE: This interface is planned to live in `ir-endpoint-types` alongside
+// `StewardConfig`, `StewardRuling`, etc. It is defined here temporarily
+// because `ir-endpoint-types` could not be updated in this change set.
+// A follow-up PR should move it and switch this file to import it.
+export interface TracktalkRawMessage {
+    id: number;
+    contents: string;
+    author_id: string;
+    author_username: string;
+    author_global_name: string;
+    guild_id: string;
+    channel_id: string;
+    channel_name: string;
+    created_at: string; // ISO 8601 from sqlite datetime('now')
+}
+
 export async function createRawMessageIngest(msg: {
     contents: string;
     author_id: string;
@@ -52,4 +68,28 @@ export async function loadUserIdsForChannel(
 
 export async function deleteAllRawMessageIngest(): Promise<void> {
     await sql`DELETE FROM tracktalk_raw_message_ingest WHERE 1=1`;
+}
+
+export async function getTracktalkMessagesForChannel(
+    channelId: string
+): Promise<TracktalkRawMessage[]> {
+    console.log('::: getTracktalkMessagesForChannel():', channelId);
+    const { records } = await sql`
+        SELECT id, contents, author_id, author_username, author_global_name,
+               guild_id, channel_id, channel_name, created_at
+        FROM tracktalk_raw_message_ingest
+        WHERE channel_id = ${channelId}
+        ORDER BY created_at ASC, id ASC`;
+
+    return (records as any[]).map((rec) => ({
+        id: Number(rec.id),
+        contents: String(rec.contents ?? ''),
+        author_id: String(rec.author_id ?? ''),
+        author_username: String(rec.author_username ?? ''),
+        author_global_name: String(rec.author_global_name ?? ''),
+        guild_id: String(rec.guild_id ?? ''),
+        channel_id: String(rec.channel_id ?? ''),
+        channel_name: String(rec.channel_name ?? ''),
+        created_at: String(rec.created_at ?? ''),
+    }));
 }

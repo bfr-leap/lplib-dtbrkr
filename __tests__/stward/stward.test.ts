@@ -3,6 +3,7 @@ import {
     getRulingsByDriver,
     getRulingsBySessionType,
     getStewardConfig,
+    getAllStewardConfigs,
     setRaceControlChannelId,
     stewardHandler,
 } from '../../src/stward';
@@ -229,6 +230,45 @@ describe('stward - steward_config accessors', () => {
             expect(result).not.toBeNull();
             expect(result!.race_control_channel_id).toBeNull();
         });
+    });
+});
+
+describe('stward - getAllStewardConfigs', () => {
+    const testLeagues = ['getAll-111', 'getAll-222', 'getAll-333'];
+
+    afterEach(async () => {
+        for (const lg of testLeagues) {
+            await sql`DELETE FROM steward_config WHERE league_id = ${lg}`;
+        }
+    });
+
+    test('returns an empty array when no configs exist', async () => {
+        // Ensure table is empty for test leagues
+        const result = await getAllStewardConfigs();
+        // Other tests may leave rows; just assert our test leagues are not present
+        const ours = result.filter((r) => testLeagues.includes(r.league_id));
+        expect(ours).toEqual([]);
+    });
+
+    test('returns every row including ones with null race_control_channel_id', async () => {
+        await setRaceControlChannelId('getAll-111', 'rc-111');
+        await setRaceControlChannelId('getAll-222', null);
+        await sql`
+            INSERT INTO steward_config (league_id, race_control_channel_id)
+            VALUES (${'getAll-333'}, ${null})`;
+
+        const all = await getAllStewardConfigs();
+        const ours = all.filter((r) => testLeagues.includes(r.league_id));
+        expect(ours).toHaveLength(3);
+
+        const byLeague: Record<string, string | null> = {};
+        for (const rec of ours) {
+            expect(typeof rec.league_id).toBe('string');
+            byLeague[rec.league_id] = rec.race_control_channel_id;
+        }
+        expect(byLeague['getAll-111']).toBe('rc-111');
+        expect(byLeague['getAll-222']).toBeNull();
+        expect(byLeague['getAll-333']).toBeNull();
     });
 });
 

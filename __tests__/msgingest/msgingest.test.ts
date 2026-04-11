@@ -1,4 +1,9 @@
-import { createRawMessageIngest, loadUserIdsForChannel, deleteAllRawMessageIngest } from '../../src/msgingest';
+import {
+    createRawMessageIngest,
+    loadUserIdsForChannel,
+    deleteAllRawMessageIngest,
+    getTracktalkMessagesForChannel,
+} from '../../src/msgingest';
 import { sql } from '../../src/db';
 
 describe('msgingest', () => {
@@ -58,6 +63,101 @@ describe('msgingest', () => {
             // Re-seed the test data that other tests may depend on
             const { uploadTracktalkRawMessageIngest } = require('../xatautl/ul-tracktalk-raw-message-ingest');
             await uploadTracktalkRawMessageIngest();
+        });
+    });
+
+    describe('getTracktalkMessagesForChannel', () => {
+        const testChannel = 'gtmfc_channel_A';
+        const otherChannel = 'gtmfc_channel_B';
+
+        afterEach(async () => {
+            await sql`DELETE FROM tracktalk_raw_message_ingest WHERE channel_id IN (${testChannel}, ${otherChannel})`;
+        });
+
+        test('returns empty array when no messages exist for the channel', async () => {
+            const result = await getTracktalkMessagesForChannel(
+                'nonexistent_channel_for_gtmfc'
+            );
+            expect(result).toEqual([]);
+        });
+
+        test('returns messages for the channel with full shape', async () => {
+            await sql`
+                INSERT INTO tracktalk_raw_message_ingest
+                (contents, author_id, author_username, author_global_name,
+                 guild_id, channel_id, channel_name, created_at)
+                VALUES (${'first'}, ${'a1'}, ${'uname1'}, ${'Global One'},
+                        ${'g1'}, ${testChannel}, ${'chan-A'}, ${'2026-03-09 10:00:00'})`;
+
+            const result = await getTracktalkMessagesForChannel(testChannel);
+            expect(result).toHaveLength(1);
+            const rec = result[0];
+            expect(typeof rec.id).toBe('number');
+            expect(rec.contents).toBe('first');
+            expect(rec.author_id).toBe('a1');
+            expect(rec.author_username).toBe('uname1');
+            expect(rec.author_global_name).toBe('Global One');
+            expect(rec.guild_id).toBe('g1');
+            expect(rec.channel_id).toBe(testChannel);
+            expect(rec.channel_name).toBe('chan-A');
+            expect(rec.created_at).toBe('2026-03-09 10:00:00');
+        });
+
+        test('excludes messages from other channels', async () => {
+            await sql`
+                INSERT INTO tracktalk_raw_message_ingest
+                (contents, author_id, author_username, author_global_name,
+                 guild_id, channel_id, channel_name, created_at)
+                VALUES (${'mine'}, ${'a1'}, ${'u'}, ${'G'},
+                        ${'g1'}, ${testChannel}, ${'chan-A'}, ${'2026-03-09 10:00:00'})`;
+            await sql`
+                INSERT INTO tracktalk_raw_message_ingest
+                (contents, author_id, author_username, author_global_name,
+                 guild_id, channel_id, channel_name, created_at)
+                VALUES (${'not mine'}, ${'a2'}, ${'u2'}, ${'G2'},
+                        ${'g1'}, ${otherChannel}, ${'chan-B'}, ${'2026-03-09 10:00:00'})`;
+
+            const result = await getTracktalkMessagesForChannel(testChannel);
+            expect(result).toHaveLength(1);
+            expect(result[0].contents).toBe('mine');
+        });
+
+        test('orders messages by created_at ASC, id ASC (oldest first)', async () => {
+            await sql`
+                INSERT INTO tracktalk_raw_message_ingest
+                (contents, author_id, author_username, author_global_name,
+                 guild_id, channel_id, channel_name, created_at)
+                VALUES (${'second'}, ${'a'}, ${'u'}, ${'G'},
+                        ${'g1'}, ${testChannel}, ${'chan-A'}, ${'2026-03-09 11:00:00'})`;
+            await sql`
+                INSERT INTO tracktalk_raw_message_ingest
+                (contents, author_id, author_username, author_global_name,
+                 guild_id, channel_id, channel_name, created_at)
+                VALUES (${'first'}, ${'a'}, ${'u'}, ${'G'},
+                        ${'g1'}, ${testChannel}, ${'chan-A'}, ${'2026-03-09 10:00:00'})`;
+            // Two rows with identical created_at — lower id should come first.
+            await sql`
+                INSERT INTO tracktalk_raw_message_ingest
+                (contents, author_id, author_username, author_global_name,
+                 guild_id, channel_id, channel_name, created_at)
+                VALUES (${'tie-a'}, ${'a'}, ${'u'}, ${'G'},
+                        ${'g1'}, ${testChannel}, ${'chan-A'}, ${'2026-03-09 12:00:00'})`;
+            await sql`
+                INSERT INTO tracktalk_raw_message_ingest
+                (contents, author_id, author_username, author_global_name,
+                 guild_id, channel_id, channel_name, created_at)
+                VALUES (${'tie-b'}, ${'a'}, ${'u'}, ${'G'},
+                        ${'g1'}, ${testChannel}, ${'chan-A'}, ${'2026-03-09 12:00:00'})`;
+
+            const result = await getTracktalkMessagesForChannel(testChannel);
+            expect(result.map((r) => r.contents)).toEqual([
+                'first',
+                'second',
+                'tie-a',
+                'tie-b',
+            ]);
+            // id of tie-a < id of tie-b (insertion order)
+            expect(result[2].id).toBeLessThan(result[3].id);
         });
     });
 
