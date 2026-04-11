@@ -97,6 +97,18 @@ export async function getStewardConfig(
     };
 }
 
+export async function getAllStewardConfigs(): Promise<StewardConfig[]> {
+    console.log('::: getAllStewardConfigs():');
+    const { records } = await sql`
+        SELECT league_id, race_control_channel_id
+        FROM steward_config`;
+
+    return (records as any[]).map((rec) => ({
+        league_id: String(rec.league_id),
+        race_control_channel_id: rec.race_control_channel_id ?? null,
+    }));
+}
+
 export async function setRaceControlChannelId(
     league_id: string,
     race_control_channel_id: string | null

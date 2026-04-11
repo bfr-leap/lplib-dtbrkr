@@ -1,3 +1,4 @@
+import { TracktalkRawMessage } from 'ir-endpoint-types';
 import { sql } from './db';
 
 export async function createRawMessageIngest(msg: {
@@ -52,4 +53,28 @@ export async function loadUserIdsForChannel(
 
 export async function deleteAllRawMessageIngest(): Promise<void> {
     await sql`DELETE FROM tracktalk_raw_message_ingest WHERE 1=1`;
+}
+
+export async function getTracktalkMessagesForChannel(
+    channelId: string
+): Promise<TracktalkRawMessage[]> {
+    console.log('::: getTracktalkMessagesForChannel():', channelId);
+    const { records } = await sql`
+        SELECT id, contents, author_id, author_username, author_global_name,
+               guild_id, channel_id, channel_name, created_at
+        FROM tracktalk_raw_message_ingest
+        WHERE channel_id = ${channelId}
+        ORDER BY created_at ASC, id ASC`;
+
+    return (records as any[]).map((rec) => ({
+        id: Number(rec.id),
+        contents: String(rec.contents ?? ''),
+        author_id: String(rec.author_id ?? ''),
+        author_username: String(rec.author_username ?? ''),
+        author_global_name: String(rec.author_global_name ?? ''),
+        guild_id: String(rec.guild_id ?? ''),
+        channel_id: String(rec.channel_id ?? ''),
+        channel_name: String(rec.channel_name ?? ''),
+        created_at: String(rec.created_at ?? ''),
+    }));
 }
