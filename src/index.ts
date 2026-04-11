@@ -10,7 +10,6 @@ export {
     loadUserIdsForChannel,
     deleteAllRawMessageIngest,
     getTracktalkMessagesForChannel,
-    TracktalkRawMessage,
 } from './msgingest';
 export { createPublication, isSubsessionPublished, createDotdPublication, isDotdPublished } from './publications';
 

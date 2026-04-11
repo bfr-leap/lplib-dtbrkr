@@ -1,20 +1,5 @@
+import { TracktalkRawMessage } from 'ir-endpoint-types';
 import { sql } from './db';
-
-// NOTE: This interface is planned to live in `ir-endpoint-types` alongside
-// `StewardConfig`, `StewardRuling`, etc. It is defined here temporarily
-// because `ir-endpoint-types` could not be updated in this change set.
-// A follow-up PR should move it and switch this file to import it.
-export interface TracktalkRawMessage {
-    id: number;
-    contents: string;
-    author_id: string;
-    author_username: string;
-    author_global_name: string;
-    guild_id: string;
-    channel_id: string;
-    channel_name: string;
-    created_at: string; // ISO 8601 from sqlite datetime('now')
-}
 
 export async function createRawMessageIngest(msg: {
     contents: string;
