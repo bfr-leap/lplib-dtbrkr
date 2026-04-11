@@ -26,4 +26,3 @@ export {
 } from './stward';
 
 export { getMostRecentActiveSeason } from './seasons';
-export { getIrCustIdForDiscordUser } from './user-mappings';
