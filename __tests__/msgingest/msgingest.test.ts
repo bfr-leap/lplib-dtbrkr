@@ -89,7 +89,7 @@ describe('msgingest', () => {
                 VALUES (${'first'}, ${'a1'}, ${'uname1'}, ${'Global One'},
                         ${'g1'}, ${testChannel}, ${'chan-A'}, ${'2026-03-09 10:00:00'})`;
 
-            const result = await getTracktalkMessagesForChannel(testChannel);
+            const result = await getTracktalkMessagesForChannel(testChannel, 365);
             expect(result).toHaveLength(1);
             const rec = result[0];
             expect(typeof rec.id).toBe('number');
@@ -117,7 +117,7 @@ describe('msgingest', () => {
                 VALUES (${'not mine'}, ${'a2'}, ${'u2'}, ${'G2'},
                         ${'g1'}, ${otherChannel}, ${'chan-B'}, ${'2026-03-09 10:00:00'})`;
 
-            const result = await getTracktalkMessagesForChannel(testChannel);
+            const result = await getTracktalkMessagesForChannel(testChannel, 365);
             expect(result).toHaveLength(1);
             expect(result[0].contents).toBe('mine');
         });
@@ -149,7 +149,7 @@ describe('msgingest', () => {
                 VALUES (${'tie-b'}, ${'a'}, ${'u'}, ${'G'},
                         ${'g1'}, ${testChannel}, ${'chan-A'}, ${'2026-03-09 12:00:00'})`;
 
-            const result = await getTracktalkMessagesForChannel(testChannel);
+            const result = await getTracktalkMessagesForChannel(testChannel, 365);
             expect(result.map((r) => r.contents)).toEqual([
                 'first',
                 'second',
@@ -158,6 +158,48 @@ describe('msgingest', () => {
             ]);
             // id of tie-a < id of tie-b (insertion order)
             expect(result[2].id).toBeLessThan(result[3].id);
+        });
+
+        test('defaults to 183 days (≈6 months) when days param is omitted', async () => {
+            // Insert a recent message (should be included)
+            await sql`
+                INSERT INTO tracktalk_raw_message_ingest
+                (contents, author_id, author_username, author_global_name,
+                 guild_id, channel_id, channel_name, created_at)
+                VALUES (${'recent'}, ${'a'}, ${'u'}, ${'G'},
+                        ${'g1'}, ${testChannel}, ${'chan-A'}, datetime('now', '-10 days'))`;
+            // Insert an old message (should be excluded)
+            await sql`
+                INSERT INTO tracktalk_raw_message_ingest
+                (contents, author_id, author_username, author_global_name,
+                 guild_id, channel_id, channel_name, created_at)
+                VALUES (${'old'}, ${'a'}, ${'u'}, ${'G'},
+                        ${'g1'}, ${testChannel}, ${'chan-A'}, datetime('now', '-200 days'))`;
+
+            const result = await getTracktalkMessagesForChannel(testChannel);
+            expect(result).toHaveLength(1);
+            expect(result[0].contents).toBe('recent');
+        });
+
+        test('respects explicit days parameter', async () => {
+            // Insert a message 5 days ago
+            await sql`
+                INSERT INTO tracktalk_raw_message_ingest
+                (contents, author_id, author_username, author_global_name,
+                 guild_id, channel_id, channel_name, created_at)
+                VALUES (${'within-range'}, ${'a'}, ${'u'}, ${'G'},
+                        ${'g1'}, ${testChannel}, ${'chan-A'}, datetime('now', '-5 days'))`;
+            // Insert a message 15 days ago
+            await sql`
+                INSERT INTO tracktalk_raw_message_ingest
+                (contents, author_id, author_username, author_global_name,
+                 guild_id, channel_id, channel_name, created_at)
+                VALUES (${'outside-range'}, ${'a'}, ${'u'}, ${'G'},
+                        ${'g1'}, ${testChannel}, ${'chan-A'}, datetime('now', '-15 days'))`;
+
+            const result = await getTracktalkMessagesForChannel(testChannel, 10);
+            expect(result).toHaveLength(1);
+            expect(result[0].contents).toBe('within-range');
         });
     });
 

@@ -56,14 +56,17 @@ export async function deleteAllRawMessageIngest(): Promise<void> {
 }
 
 export async function getTracktalkMessagesForChannel(
-    channelId: string
+    channelId: string,
+    days?: number
 ): Promise<TracktalkRawMessage[]> {
-    console.log('::: getTracktalkMessagesForChannel():', channelId);
+    const lookbackDays = days ?? 183;
+    console.log('::: getTracktalkMessagesForChannel():', channelId, `(last ${lookbackDays} days)`);
     const { records } = await sql`
         SELECT id, contents, author_id, author_username, author_global_name,
                guild_id, channel_id, channel_name, created_at
         FROM tracktalk_raw_message_ingest
         WHERE channel_id = ${channelId}
+          AND created_at >= datetime('now', ${`-${lookbackDays} days`})
         ORDER BY created_at ASC, id ASC`;
 
     return (records as any[]).map((rec) => ({
