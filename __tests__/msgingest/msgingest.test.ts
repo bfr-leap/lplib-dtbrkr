@@ -3,6 +3,8 @@ import {
     loadUserIdsForChannel,
     deleteAllRawMessageIngest,
     getTracktalkMessagesForChannel,
+    upsertDiscordUserMapping,
+    loadDiscordUserMappings,
 } from '../../src/msgingest';
 import { sql } from '../../src/db';
 
@@ -158,6 +160,115 @@ describe('msgingest', () => {
             ]);
             // id of tie-a < id of tie-b (insertion order)
             expect(result[2].id).toBeLessThan(result[3].id);
+        });
+    });
+
+    describe('upsertDiscordUserMapping', () => {
+        afterEach(async () => {
+            await sql`DELETE FROM discord_user_mappings WHERE guild_id IN (${'test_guild_um'}, ${'test_guild_um2'})`;
+        });
+
+        test('inserts a new mapping', async () => {
+            await upsertDiscordUserMapping({
+                user_id: 'u1',
+                display_name: 'UserOne',
+                username: 'userone',
+                guild_id: 'test_guild_um',
+            });
+
+            const { records } = await sql`
+                SELECT user_id, display_name, username, guild_id
+                FROM discord_user_mappings
+                WHERE guild_id = ${'test_guild_um'}`;
+            expect(records).toHaveLength(1);
+            const rec = records[0] as any;
+            expect(rec.user_id).toBe('u1');
+            expect(rec.display_name).toBe('UserOne');
+            expect(rec.username).toBe('userone');
+        });
+
+        test('upserts on conflict — updates display_name and username', async () => {
+            await upsertDiscordUserMapping({
+                user_id: 'u1',
+                display_name: 'OldName',
+                username: 'olduser',
+                guild_id: 'test_guild_um',
+            });
+            await upsertDiscordUserMapping({
+                user_id: 'u1',
+                display_name: 'NewName',
+                username: 'newuser',
+                guild_id: 'test_guild_um',
+            });
+
+            const { records } = await sql`
+                SELECT display_name, username
+                FROM discord_user_mappings
+                WHERE user_id = ${'u1'} AND guild_id = ${'test_guild_um'}`;
+            expect(records).toHaveLength(1);
+            expect((records[0] as any).display_name).toBe('NewName');
+            expect((records[0] as any).username).toBe('newuser');
+        });
+
+        test('same user_id in different guilds creates separate rows', async () => {
+            await upsertDiscordUserMapping({
+                user_id: 'u1',
+                display_name: 'Guild1Name',
+                username: 'user1',
+                guild_id: 'test_guild_um',
+            });
+            await upsertDiscordUserMapping({
+                user_id: 'u1',
+                display_name: 'Guild2Name',
+                username: 'user1',
+                guild_id: 'test_guild_um2',
+            });
+
+            const { records } = await sql`
+                SELECT * FROM discord_user_mappings
+                WHERE user_id = ${'u1'} AND guild_id IN (${'test_guild_um'}, ${'test_guild_um2'})`;
+            expect(records).toHaveLength(2);
+        });
+    });
+
+    describe('loadDiscordUserMappings', () => {
+        afterEach(async () => {
+            await sql`DELETE FROM discord_user_mappings WHERE guild_id IN (${'test_guild_lm'}, ${'test_guild_lm2'})`;
+        });
+
+        test('returns empty array when no mappings exist', async () => {
+            const result = await loadDiscordUserMappings('nonexistent_guild');
+            expect(result).toEqual([]);
+        });
+
+        test('returns all mappings for the given guild', async () => {
+            await upsertDiscordUserMapping({ user_id: 'u1', display_name: 'One', username: 'one', guild_id: 'test_guild_lm' });
+            await upsertDiscordUserMapping({ user_id: 'u2', display_name: 'Two', username: 'two', guild_id: 'test_guild_lm' });
+
+            const result = await loadDiscordUserMappings('test_guild_lm');
+            expect(result).toHaveLength(2);
+            const ids = result.map((r) => r.user_id).sort();
+            expect(ids).toEqual(['u1', 'u2']);
+        });
+
+        test('does not return mappings from other guilds', async () => {
+            await upsertDiscordUserMapping({ user_id: 'u1', display_name: 'One', username: 'one', guild_id: 'test_guild_lm' });
+            await upsertDiscordUserMapping({ user_id: 'u2', display_name: 'Two', username: 'two', guild_id: 'test_guild_lm2' });
+
+            const result = await loadDiscordUserMappings('test_guild_lm');
+            expect(result).toHaveLength(1);
+            expect(result[0].user_id).toBe('u1');
+        });
+
+        test('returns correct shape with display_name and username', async () => {
+            await upsertDiscordUserMapping({ user_id: 'u1', display_name: 'Display', username: 'uname', guild_id: 'test_guild_lm' });
+
+            const result = await loadDiscordUserMappings('test_guild_lm');
+            expect(result[0]).toEqual({
+                user_id: 'u1',
+                display_name: 'Display',
+                username: 'uname',
+            });
         });
     });
 
