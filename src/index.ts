@@ -10,6 +10,8 @@ export {
     loadUserIdsForChannel,
     deleteAllRawMessageIngest,
     getTracktalkMessagesForChannel,
+    upsertDiscordUserMapping,
+    loadDiscordUserMappings,
 } from './msgingest';
 export { createPublication, isSubsessionPublished, createDotdPublication, isDotdPublished } from './publications';
 

@@ -35,7 +35,7 @@ export async function loadUserIdsForChannel(
                     WHERE channel_id = ${channel}
                     LIMIT 1
                 )
-                AND created_at >= datetime('now', '-7 days')
+                AND created_at >= datetime('now', '-6 months')
             ) sub
             WHERE rn = 1`;
 
@@ -53,6 +53,31 @@ export async function loadUserIdsForChannel(
 
 export async function deleteAllRawMessageIngest(): Promise<void> {
     await sql`DELETE FROM tracktalk_raw_message_ingest WHERE 1=1`;
+}
+
+export async function upsertDiscordUserMapping(mapping: {
+    user_id: string;
+    display_name: string;
+    username: string;
+    guild_id: string;
+}): Promise<void> {
+    await sql`
+        INSERT INTO discord_user_mappings (user_id, display_name, username, guild_id, updated_at)
+        VALUES (${mapping.user_id}, ${mapping.display_name}, ${mapping.username}, ${mapping.guild_id}, datetime('now'))
+        ON CONFLICT(user_id, guild_id) DO UPDATE SET
+            display_name = ${mapping.display_name},
+            username = ${mapping.username},
+            updated_at = datetime('now')`;
+}
+
+export async function loadDiscordUserMappings(
+    guild_id: string
+): Promise<{ user_id: string; display_name: string; username: string }[]> {
+    const { records } = await sql`
+        SELECT user_id, display_name, username
+        FROM discord_user_mappings
+        WHERE guild_id = ${guild_id}`;
+    return records as { user_id: string; display_name: string; username: string }[];
 }
 
 export async function getTracktalkMessagesForChannel(
