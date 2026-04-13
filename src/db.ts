@@ -138,6 +138,15 @@ function initSchema(db: Database.Database): void {
             cust_id INTEGER
         );
 
+        CREATE TABLE IF NOT EXISTS discord_user_mappings (
+            user_id TEXT NOT NULL,
+            display_name TEXT,
+            username TEXT,
+            guild_id TEXT NOT NULL,
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            PRIMARY KEY (user_id, guild_id)
+        );
+
         CREATE TABLE IF NOT EXISTS steward_config (
             league_id TEXT PRIMARY KEY,
             race_control_channel_id TEXT
