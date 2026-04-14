@@ -80,6 +80,31 @@ export async function loadDiscordUserMappings(
     return records as { user_id: string; display_name: string; username: string }[];
 }
 
+/**
+ * Returns the `guild_id` that owns the given Discord channel, derived by
+ * inspecting the tracktalk message ingest. Returns `null` when no message
+ * has ever been ingested for that channel (so callers can decide whether
+ * to log + skip vs. raise).
+ *
+ * This is a pragmatic lookup against ingested messages — there is no
+ * dedicated `discord_channels` table — so a channel with zero ingested
+ * messages will return `null` even if it exists in Discord.
+ */
+export async function getGuildIdForChannel(
+    channelId: string
+): Promise<string | null> {
+    console.log('::: getGuildIdForChannel():', channelId);
+    const { records } = await sql`
+        SELECT guild_id
+        FROM tracktalk_raw_message_ingest
+        WHERE channel_id = ${channelId}
+        LIMIT 1`;
+
+    const rec = records[0] as any;
+    if (!rec || rec.guild_id == null) return null;
+    return String(rec.guild_id);
+}
+
 export async function getTracktalkMessagesForChannel(
     channelId: string
 ): Promise<TracktalkRawMessage[]> {
