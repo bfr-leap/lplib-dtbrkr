@@ -5,6 +5,7 @@ import {
     getTracktalkMessagesForChannel,
     upsertDiscordUserMapping,
     loadDiscordUserMappings,
+    getGuildIdForChannel,
 } from '../../src/msgingest';
 import { sql } from '../../src/db';
 
@@ -269,6 +270,95 @@ describe('msgingest', () => {
                 display_name: 'Display',
                 username: 'uname',
             });
+        });
+    });
+
+    describe('getGuildIdForChannel', () => {
+        const testChannelA = 'ggidc_channel_A';
+        const testChannelB = 'ggidc_channel_B';
+        const testGuildA = 'ggidc_guild_A';
+        const testGuildB = 'ggidc_guild_B';
+
+        afterEach(async () => {
+            await sql`DELETE FROM tracktalk_raw_message_ingest WHERE channel_id IN (${testChannelA}, ${testChannelB})`;
+        });
+
+        test('returns null when no messages exist for the channel', async () => {
+            const result = await getGuildIdForChannel('nonexistent_channel_for_ggidc');
+            expect(result).toBeNull();
+        });
+
+        test('returns the guild_id of an ingested message for the channel', async () => {
+            await createRawMessageIngest({
+                contents: 'hi',
+                author_id: 'a1',
+                author_username: 'u1',
+                author_global_name: 'User One',
+                guild_id: testGuildA,
+                channel_id: testChannelA,
+                channel_name: 'chan-A',
+            });
+
+            const result = await getGuildIdForChannel(testChannelA);
+            expect(result).toBe(testGuildA);
+        });
+
+        test('scopes lookup per channel', async () => {
+            await createRawMessageIngest({
+                contents: 'a',
+                author_id: 'a1',
+                author_username: 'u1',
+                author_global_name: 'U1',
+                guild_id: testGuildA,
+                channel_id: testChannelA,
+                channel_name: 'chan-A',
+            });
+            await createRawMessageIngest({
+                contents: 'b',
+                author_id: 'a2',
+                author_username: 'u2',
+                author_global_name: 'U2',
+                guild_id: testGuildB,
+                channel_id: testChannelB,
+                channel_name: 'chan-B',
+            });
+
+            expect(await getGuildIdForChannel(testChannelA)).toBe(testGuildA);
+            expect(await getGuildIdForChannel(testChannelB)).toBe(testGuildB);
+        });
+
+        test('returns a single string when channel has multiple ingested messages', async () => {
+            await createRawMessageIngest({
+                contents: 'm1',
+                author_id: 'a1',
+                author_username: 'u1',
+                author_global_name: 'U1',
+                guild_id: testGuildA,
+                channel_id: testChannelA,
+                channel_name: 'chan-A',
+            });
+            await createRawMessageIngest({
+                contents: 'm2',
+                author_id: 'a2',
+                author_username: 'u2',
+                author_global_name: 'U2',
+                guild_id: testGuildA,
+                channel_id: testChannelA,
+                channel_name: 'chan-A',
+            });
+            await createRawMessageIngest({
+                contents: 'm3',
+                author_id: 'a3',
+                author_username: 'u3',
+                author_global_name: 'U3',
+                guild_id: testGuildA,
+                channel_id: testChannelA,
+                channel_name: 'chan-A',
+            });
+
+            const result = await getGuildIdForChannel(testChannelA);
+            expect(typeof result).toBe('string');
+            expect(result).toBe(testGuildA);
         });
     });
 

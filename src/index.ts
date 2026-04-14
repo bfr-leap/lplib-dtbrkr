@@ -12,6 +12,7 @@ export {
     getTracktalkMessagesForChannel,
     upsertDiscordUserMapping,
     loadDiscordUserMappings,
+    getGuildIdForChannel,
 } from './msgingest';
 export { createPublication, isSubsessionPublished, createDotdPublication, isDotdPublished } from './publications';
 
@@ -27,4 +28,4 @@ export {
     stewardHandler,
 } from './stward';
 
-export { getMostRecentActiveSeason } from './seasons';
+export { getMostRecentActiveSeason, getAllSeasonIdsForLeague } from './seasons';
