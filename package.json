@@ -28,15 +28,7 @@
         "typescript": "^4.9.5"
     },
     "dependencies": {
-        "@clerk/clerk-sdk-node": "^5.0.12",
-        "@clerk/themes": "^2.1.10",
         "better-sqlite3": "^9.4.3",
-        "ir-endpoint-types": "github:bfr-leap/ir-endpoint-types#main",
-        "mixpanel-browser": "^2.45.0",
-        "openai": "^3.3.0",
-        "pinia": "^2.0.28",
-        "vue": "^3.2.45",
-        "vue-clerk": "^0.4.3",
-        "vue-router": "^4.1.6"
+        "ir-endpoint-types": "github:bfr-leap/ir-endpoint-types#main"
     }
 }
