@@ -1,4 +1,4 @@
-import { EpochTelemetry } from 'ir-endpoints-types';
+import { EpochTelemetry } from 'ir-endpoint-types';
 import {
     ldataReadFile,
     ldataReadFileAsync,

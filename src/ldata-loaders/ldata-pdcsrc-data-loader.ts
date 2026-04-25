@@ -4,7 +4,7 @@ import {
     ldataReadFile,
     ldataReadFileAsync,
 } from './fsutil';
-import { PodcastScriptedSrc } from 'ir-endpoints-types';
+import { PodcastScriptedSrc } from 'ir-endpoint-types';
 
 const MNT_PT = './public/data/ldata-pdcsrc/';
 

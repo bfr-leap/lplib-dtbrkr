@@ -6,7 +6,7 @@ import {
     ldataWriteFile,
     ldataWriteFileAsync,
 } from './fsutil';
-import type { StewardRuling } from 'ir-endpoints-types';
+import type { StewardRuling } from 'ir-endpoint-types';
 
 const MNT_PT = './public/data/ldata-stward/';
 const DATASET_STEWARD_RULINGS = 'stewardRulings';

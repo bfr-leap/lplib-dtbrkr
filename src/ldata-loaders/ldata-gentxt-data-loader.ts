@@ -8,7 +8,7 @@ import type {
     GeneratedSimsessionSummary,
     DotdProfileData,
     DotdManifestEntry,
-} from 'ir-endpoints-types';
+} from 'ir-endpoint-types';
 
 const MNT_PT = './public/data/ldata-gentxt/';
 

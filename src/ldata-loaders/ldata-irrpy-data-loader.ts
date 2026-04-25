@@ -1,7 +1,7 @@
 import { readFileSync } from 'fs';
 import { readFile } from 'fs/promises';
 
-import type { SubsessionTelemetry } from 'ir-endpoints-types';
+import type { SubsessionTelemetry } from 'ir-endpoint-types';
 import {
     ldataReadFile,
     ldataReadFileAsync,

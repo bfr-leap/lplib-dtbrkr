@@ -1,7 +1,7 @@
 import { readFileSync } from 'fs';
 import { readFile } from 'fs/promises';
 
-import type { ActiveLeagueSchedule } from 'ir-endpoints-types';
+import type { ActiveLeagueSchedule } from 'ir-endpoint-types';
 
 const MNT_PT = './public/data/ldata-usrcfg/';
 

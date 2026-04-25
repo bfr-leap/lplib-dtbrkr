@@ -24,6 +24,7 @@
     },
     "dependencies": {
         "better-sqlite3": "^9.4.3",
-        "ir-endpoint-types": "github:bfr-leap/ir-endpoint-types#main"
+        "ir-endpoint-types": "github:bfr-leap/ir-endpoint-types#main",
+        "kafkajs": "^2.2.4"
     }
 }

@@ -4,7 +4,7 @@ import {
     ldataReadFile,
     ldataReadFileAsync,
 } from './fsutil';
-import { OnTrackRaceEvents } from 'ir-endpoints-types';
+import { OnTrackRaceEvents } from 'ir-endpoint-types';
 
 const MNT_PT = './public/data/ldata-trkevts/';
 

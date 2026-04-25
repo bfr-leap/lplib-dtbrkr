@@ -18,7 +18,7 @@ import type {
     LapChartData,
     MembersData,
     SubsessionTelemetry,
-} from 'ir-endpoints-types';
+} from 'ir-endpoint-types';
 import { ldataReadFile, ldataReadFileAsync } from './fsutil';
 
 const MNT_PT = './public/data/ldata-irweb/';
