@@ -1,5 +1,5 @@
-jest.mock('./ldata-loaders/ldata-stward-data-loader', () => ({
-    getStewardRulingsAsync: jest.fn(),
+jest.mock('./dtlkdata', () => ({
+    getDocument: jest.fn(),
 }));
 
 import {
@@ -12,7 +12,7 @@ import {
     stewardHandler,
 } from './stward';
 import { sql } from './db';
-import { getStewardRulingsAsync } from './ldata-loaders/ldata-stward-data-loader';
+import { getDocument as getDataLakeDocument } from './dtlkdata';
 
 const sampleRulings = [
     {
@@ -81,12 +81,12 @@ const sampleRulings = [
 ];
 
 function mockStwardData(payload: any) {
-    (getStewardRulingsAsync as jest.Mock).mockResolvedValueOnce(payload);
+    (getDataLakeDocument as jest.Mock).mockResolvedValueOnce(payload);
 }
 
 describe('stward - data lake accessors', () => {
     beforeEach(() => {
-        (getStewardRulingsAsync as jest.Mock).mockReset();
+        (getDataLakeDocument as jest.Mock).mockReset();
     });
 
     describe('getAllRulings', () => {
@@ -99,19 +99,24 @@ describe('stward - data lake accessors', () => {
                 'championship_point_deduction'
             );
 
-            expect(getStewardRulingsAsync).toHaveBeenCalledWith(4534, 105035);
+            expect(getDataLakeDocument).toHaveBeenCalledWith({
+                namespace: 'ldata-stward',
+                type: 'rulings',
+                league: '4534',
+                season: '105035',
+            });
         });
 
         test('unwraps { rulings: [...] } wrapper', async () => {
-            // The loader's typed return is StewardRuling[], but ldataReadFile
-            // doesn't validate shape — if a file on disk is { rulings: [...] }
-            // the wrapper-unwrap defensive code in stward.ts still triggers.
+            // stward.ts has historically seen two shapes in the wild — bare
+            // arrays and { rulings: [...] } wrappers. The dispatcher passes
+            // either through unchanged, so both still need defensive handling.
             mockStwardData({ rulings: sampleRulings });
             const result = await getAllRulings('4534', '105035');
             expect(result).toHaveLength(3);
         });
 
-        test('returns empty array when loader returns null', async () => {
+        test('returns empty array when the data lake returns null', async () => {
             mockStwardData(null);
             const result = await getAllRulings('4534', '105035');
             expect(result).toEqual([]);
@@ -275,7 +280,7 @@ describe('stward - stewardHandler', () => {
     const testLeague = '828282';
 
     beforeEach(() => {
-        (getStewardRulingsAsync as jest.Mock).mockReset();
+        (getDataLakeDocument as jest.Mock).mockReset();
     });
 
     afterEach(async () => {
