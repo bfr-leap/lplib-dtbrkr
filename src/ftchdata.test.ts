@@ -1,24 +1,24 @@
-jest.mock('../../src/usrdata', () => ({
+jest.mock('./usrdata', () => ({
     userDataHandler: jest.fn(async () => ({ type: 'usrdata-result' })),
 }));
 
-jest.mock('../../src/usrcfg', () => ({
+jest.mock('./usrcfg', () => ({
     userConfigHandler: jest.fn(async () => ({ type: 'usrcfg-result' })),
 }));
 
-jest.mock('../../src/admcfg', () => ({
+jest.mock('./admcfg', () => ({
     adminConfigHandler: jest.fn(async () => ({ type: 'admcfg-result' })),
 }));
 
-jest.mock('../../src/dtlkdata', () => ({
+jest.mock('./dtlkdata', () => ({
     getDocument: jest.fn(async () => ({ type: 'dtlkdata-result' })),
 }));
 
-import { getDocument } from '../../src/ftchdata';
-import { userDataHandler } from '../../src/usrdata';
-import { userConfigHandler } from '../../src/usrcfg';
-import { adminConfigHandler } from '../../src/admcfg';
-import { getDocument as getDataLakeDocument } from '../../src/dtlkdata';
+import { getDocument } from './ftchdata';
+import { userDataHandler } from './usrdata';
+import { userConfigHandler } from './usrcfg';
+import { adminConfigHandler } from './admcfg';
+import { getDocument as getDataLakeDocument } from './dtlkdata';
 
 describe('ftchdata', () => {
     beforeEach(() => {

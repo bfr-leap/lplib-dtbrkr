@@ -1,4 +1,4 @@
-import { getActiveLeagueSchedule } from '../../src/lib-usrcfg/active-league-schedule';
+import { getActiveLeagueSchedule } from './active-league-schedule';
 
 import { ACTIVE_LEAGUE_SCHEDULE } from './static-active-league-schedule';
 

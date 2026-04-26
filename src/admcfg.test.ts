@@ -1,5 +1,5 @@
-import { adminConfigHandler } from '../../src/admcfg';
-import { getDb } from '../../src/db';
+import { adminConfigHandler } from './admcfg';
+import { getDb } from './db';
 
 const ADMIN_USER = 'user_2iLpmemWDB0Q0lnePYRHo95hp4W'; // has league_cdr_admin feature
 const NON_ADMIN_USER = 'user_unlisted'; // does not have league_cdr_admin feature

@@ -1,7 +1,7 @@
-import { getPageData } from '../../src/page-data';
+import { getPageData } from './page-data';
 import { PAGE_DATA_STANDINGS, PAGE_DATA_HOME } from './static-page-data';
 
-jest.mock('../../src/dtlkdata', () => ({
+jest.mock('./dtlkdata', () => ({
     getDocument: jest.fn(async (query: any) => {
         const league = query.league?.toString();
         const season = query.season?.toString();

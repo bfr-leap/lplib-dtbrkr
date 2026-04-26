@@ -1,4 +1,4 @@
-import { getDb, resetDb, executeInsert, sql, getSqliteClient } from '../../src/db';
+import { getDb, resetDb, executeInsert, sql, getSqliteClient } from './db';
 
 describe('db', () => {
     describe('getDb', () => {

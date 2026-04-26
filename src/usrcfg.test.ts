@@ -1,4 +1,4 @@
-jest.mock('../../src/dtlkdata', () => ({
+jest.mock('./dtlkdata', () => ({
     getDocument: jest.fn(async (query: any) => {
         if (query.type === 'leagueSeasonSessions') {
             return {
@@ -13,7 +13,7 @@ jest.mock('../../src/dtlkdata', () => ({
     }),
 }));
 
-import { userConfigHandler } from '../../src/usrcfg';
+import { userConfigHandler } from './usrcfg';
 
 describe('userConfigHandler', () => {
     describe('leagueTeamsInfo', () => {

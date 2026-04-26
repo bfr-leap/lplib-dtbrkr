@@ -1,5 +1,5 @@
-import { getMostRecentActiveSeason, getAllSeasonIdsForLeague } from '../../src/seasons';
-import { sql } from '../../src/db';
+import { getMostRecentActiveSeason, getAllSeasonIdsForLeague } from './seasons';
+import { sql } from './db';
 
 describe('seasons - getMostRecentActiveSeason', () => {
     const testLeagueId = 9990001;

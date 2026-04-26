@@ -1,4 +1,4 @@
-import { featureMiddleware } from '../../src/feature-middleware';
+import { featureMiddleware } from './feature-middleware';
 
 describe('feature-middleware', () => {
     let unlistedUser = 'unlisted';

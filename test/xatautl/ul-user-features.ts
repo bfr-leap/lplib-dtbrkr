@@ -1,5 +1,5 @@
 import { getDb, sql, executeInsert } from '../../src/db';
-import { USER_FEATURES } from '../usrdata/static-user-features';
+import { USER_FEATURES } from '../../src/static-user-features';
 
 export async function uploadUserFeatures() {
     console.log('uploadUserFeatures() start');

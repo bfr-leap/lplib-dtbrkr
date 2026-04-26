@@ -1,4 +1,4 @@
-import { userFeatures } from '../../src/usrdata';
+import { userFeatures } from './usrdata';
 import { USER_FEATURES } from './static-user-features';
 
 describe('user-features', () => {

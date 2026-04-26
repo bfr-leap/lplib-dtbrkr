@@ -6,8 +6,8 @@ import {
     upsertDiscordUserMapping,
     loadDiscordUserMappings,
     getGuildIdForChannel,
-} from '../../src/msgingest';
-import { sql } from '../../src/db';
+} from './msgingest';
+import { sql } from './db';
 
 describe('msgingest', () => {
     describe('createRawMessageIngest', () => {
@@ -64,7 +64,7 @@ describe('msgingest', () => {
 
         afterAll(async () => {
             // Re-seed the test data that other tests may depend on
-            const { uploadTracktalkRawMessageIngest } = require('../xatautl/ul-tracktalk-raw-message-ingest');
+            const { uploadTracktalkRawMessageIngest } = require('../test/xatautl/ul-tracktalk-raw-message-ingest');
             await uploadTracktalkRawMessageIngest();
         });
     });

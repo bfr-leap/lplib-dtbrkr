@@ -1,5 +1,5 @@
-import { createPublication, isSubsessionPublished } from '../../src/publications';
-import { sql } from '../../src/db';
+import { createPublication, isSubsessionPublished } from './publications';
+import { sql } from './db';
 
 describe('publications', () => {
     afterEach(async () => {

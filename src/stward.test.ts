@@ -6,8 +6,8 @@ import {
     getAllStewardConfigs,
     setRaceControlChannelId,
     stewardHandler,
-} from '../../src/stward';
-import { sql } from '../../src/db';
+} from './stward';
+import { sql } from './db';
 
 const mockFetch = jest.fn();
 global.fetch = mockFetch as any;

@@ -1,4 +1,4 @@
-import { getDocument } from '../../src/dtlkdata';
+import { getDocument } from './dtlkdata';
 
 const mockFetch = jest.fn();
 global.fetch = mockFetch as any;

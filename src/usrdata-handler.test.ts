@@ -4,11 +4,11 @@ import {
     updIrLinkDriver,
     updIrLinkCode,
     userDataHandler,
-} from '../../src/usrdata';
-import { sql, getDb } from '../../src/db';
+} from './usrdata';
+import { sql, getDb } from './db';
 
 // Mock dtlkdata since defLgSeasSubCtx calls it internally
-jest.mock('../../src/dtlkdata', () => ({
+jest.mock('./dtlkdata', () => ({
     getDocument: jest.fn(async (query: any) => {
         if (query.type === 'leagueSeasonSessions') {
             return {
