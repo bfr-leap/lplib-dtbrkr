@@ -260,8 +260,8 @@ const dt = [
     },
 ];
 
-export async function uploadLeagueTeamsInfo() {
-    console.log('uploadLeagueTeamsInfo() start');
+export async function seedLeagueTeamsInfo() {
+    console.log('seedLeagueTeamsInfo() start');
 
     const db = getDb();
 
@@ -291,5 +291,5 @@ export async function uploadLeagueTeamsInfo() {
     const { records: teamUsersPage } = await sql`SELECT * FROM teams_users`;
     console.log(teamUsersPage);
 
-    console.log('uploadLeagueTeamsInfo() done');
+    console.log('seedLeagueTeamsInfo() done');
 }

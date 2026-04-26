@@ -1,8 +1,8 @@
 import { getDb, sql, executeInsert } from '../../src/db';
 import { USER_FEATURES } from '../../src/static-user-features';
 
-export async function uploadUserFeatures() {
-    console.log('uploadUserFeatures() start');
+export async function seedUserFeatures() {
+    console.log('seedUserFeatures() start');
 
     const db = getDb();
 
@@ -31,5 +31,5 @@ export async function uploadUserFeatures() {
             VALUES (${userAppFeature.user_id}, ${featureMap[userAppFeature.feature_name]})`;
     }
 
-    console.log('uploadUserFeatures() done');
+    console.log('seedUserFeatures() done');
 }

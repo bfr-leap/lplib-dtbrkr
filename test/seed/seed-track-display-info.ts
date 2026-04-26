@@ -304,8 +304,8 @@ let tracks: any = {
     },
 };
 
-export async function uploadTrackDisplayInfo() {
-    console.log('uploadTrackDisplayInfo() start');
+export async function seedTrackDisplayInfo() {
+    console.log('seedTrackDisplayInfo() start');
 
     const db = getDb();
     db.exec(`DELETE FROM "tracks"`);
@@ -320,5 +320,5 @@ export async function uploadTrackDisplayInfo() {
     const { records: page } = await sql`SELECT * FROM tracks`;
     console.log(page);
 
-    console.log('uploadTrackDisplayInfo() done');
+    console.log('seedTrackDisplayInfo() done');
 }

@@ -1,8 +1,8 @@
 import { deleteAllRawMessageIngest } from '../../src/msgingest';
 import { sql } from '../../src/db';
 
-export async function uploadTracktalkRawMessageIngest() {
-    console.log('uploadTracktalkRawMessageIngest() start');
+export async function seedTracktalkRawMessageIngest() {
+    console.log('seedTracktalkRawMessageIngest() start');
 
     await deleteAllRawMessageIngest();
 

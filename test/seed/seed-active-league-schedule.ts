@@ -3,8 +3,8 @@ import { ACTIVE_LEAGUE_SCHEDULE } from '../../src/lib-usrcfg/static-active-leagu
 
 let jsonInput = ACTIVE_LEAGUE_SCHEDULE;
 
-export async function uploadActiveLeagueSchedule() {
-    console.log('uploadActiveLeagueSchedule() start');
+export async function seedActiveLeagueSchedule() {
+    console.log('seedActiveLeagueSchedule() start');
 
     const db = getDb();
 
@@ -123,5 +123,5 @@ export async function uploadActiveLeagueSchedule() {
         }
     }
 
-    console.log('uploadActiveLeagueSchedule() done');
+    console.log('seedActiveLeagueSchedule() done');
 }

@@ -64,8 +64,8 @@ describe('msgingest', () => {
 
         afterAll(async () => {
             // Re-seed the test data that other tests may depend on
-            const { uploadTracktalkRawMessageIngest } = require('../test/xatautl/ul-tracktalk-raw-message-ingest');
-            await uploadTracktalkRawMessageIngest();
+            const { seedTracktalkRawMessageIngest } = require('../test/seed/seed-tracktalk-raw-message-ingest');
+            await seedTracktalkRawMessageIngest();
         });
     });
 
