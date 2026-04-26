@@ -58,6 +58,10 @@ export {
     getSimsessionDriverTelemetryAsync,
     getProcessedTelemetryManifestAsync,
     saveProcessedTelemetryManifestAsync,
+    getLeagueDriverStats,
+    getLeagueDriverStatsAsync,
+    getSingleMemberData,
+    getSingleMemberDataAsync,
 } from './ldata-loaders/iracing-derived-data-loader';
 
 // `getActiveLeagueSchedule` is also the name of the SQL-backed accessor

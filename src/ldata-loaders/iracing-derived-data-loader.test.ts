@@ -15,6 +15,10 @@ import {
     getSimsessionDriverTelemetryAsync,
     getProcessedTelemetryManifestAsync,
     saveProcessedTelemetryManifestAsync,
+    getLeagueDriverStats,
+    getLeagueDriverStatsAsync,
+    getSingleMemberData,
+    getSingleMemberDataAsync,
 } from './iracing-derived-data-loader';
 
 const MNT = './public/data/ldata-rsltsts/';
@@ -205,5 +209,75 @@ describe('processed telemetry manifest async', () => {
             `${MNT}processedTelemetryManifest/42.json`,
             '[10,20,30]'
         );
+    });
+});
+
+describe('getLeagueDriverStats', () => {
+    it('reads the per-league driver-stats file', () => {
+        (readFileSync as jest.Mock).mockReturnValue('{}');
+        expect(getLeagueDriverStats(42)).toEqual({});
+        expect(readFileSync).toHaveBeenCalledWith(
+            `${MNT}leagueDriverStats/42.json`,
+            expect.any(Object)
+        );
+    });
+
+    it('returns null on read failure', () => {
+        (readFileSync as jest.Mock).mockImplementation(() => {
+            throw new Error('ENOENT');
+        });
+        expect(getLeagueDriverStats(42)).toBeNull();
+    });
+});
+
+describe('getLeagueDriverStatsAsync', () => {
+    it('reads the per-league driver-stats file', async () => {
+        (readFile as jest.Mock).mockResolvedValue('{}');
+        await expect(getLeagueDriverStatsAsync(42)).resolves.toEqual({});
+        expect(readFile).toHaveBeenCalledWith(
+            `${MNT}leagueDriverStats/42.json`,
+            expect.any(Object)
+        );
+    });
+
+    it('returns null on read failure', async () => {
+        (readFile as jest.Mock).mockRejectedValue(new Error('ENOENT'));
+        await expect(getLeagueDriverStatsAsync(42)).resolves.toBeNull();
+    });
+});
+
+describe('getSingleMemberData', () => {
+    it('reads the per-driver member-data file', () => {
+        (readFileSync as jest.Mock).mockReturnValue('{"cust_id":12345}');
+        expect(getSingleMemberData(12345)).toEqual({ cust_id: 12345 });
+        expect(readFileSync).toHaveBeenCalledWith(
+            `${MNT}singleMemberData/12345.json`,
+            expect.any(Object)
+        );
+    });
+
+    it('returns null on read failure', () => {
+        (readFileSync as jest.Mock).mockImplementation(() => {
+            throw new Error('ENOENT');
+        });
+        expect(getSingleMemberData(12345)).toBeNull();
+    });
+});
+
+describe('getSingleMemberDataAsync', () => {
+    it('reads the per-driver member-data file', async () => {
+        (readFile as jest.Mock).mockResolvedValue('{"cust_id":12345}');
+        await expect(getSingleMemberDataAsync(12345)).resolves.toEqual({
+            cust_id: 12345,
+        });
+        expect(readFile).toHaveBeenCalledWith(
+            `${MNT}singleMemberData/12345.json`,
+            expect.any(Object)
+        );
+    });
+
+    it('returns null on read failure', async () => {
+        (readFile as jest.Mock).mockRejectedValue(new Error('ENOENT'));
+        await expect(getSingleMemberDataAsync(12345)).resolves.toBeNull();
     });
 });

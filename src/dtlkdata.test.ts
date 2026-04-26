@@ -1,101 +1,194 @@
+jest.mock('./ldata-loaders/iracing-scraped-data-loader', () => ({
+    getLeagueSeasonsAsync: jest.fn(),
+    getLeagueSeasonSessionsAsync: jest.fn(),
+    getMembersDataAsync: jest.fn(),
+}));
+jest.mock('./ldata-loaders/iracing-derived-data-loader', () => ({
+    getLeagueDriverStatsAsync: jest.fn(),
+    getSingleMemberDataAsync: jest.fn(),
+}));
+jest.mock('./ldata-loaders/ldata-stward-data-loader', () => ({
+    getStewardRulingsAsync: jest.fn(),
+}));
+
 import { getDocument } from './dtlkdata';
+import {
+    getLeagueSeasonsAsync,
+    getLeagueSeasonSessionsAsync,
+    getMembersDataAsync,
+} from './ldata-loaders/iracing-scraped-data-loader';
+import {
+    getLeagueDriverStatsAsync,
+    getSingleMemberDataAsync,
+} from './ldata-loaders/iracing-derived-data-loader';
+import { getStewardRulingsAsync } from './ldata-loaders/ldata-stward-data-loader';
 
-const mockFetch = jest.fn();
-global.fetch = mockFetch as any;
+beforeEach(() => {
+    jest.clearAllMocks();
+});
 
-describe('dtlkdata', () => {
-    beforeEach(() => {
-        mockFetch.mockReset();
-    });
-
-    describe('getDocument', () => {
-        test('constructs the correct URL and returns parsed JSON', async () => {
-            const fakeData = { foo: 'bar' };
-            mockFetch.mockResolvedValueOnce({
-                json: async () => fakeData,
+describe('dtlkdata.getDocument dispatcher', () => {
+    describe('ldata-irweb', () => {
+        test('routes leagueSeasonSessions to getLeagueSeasonSessionsAsync', async () => {
+            (getLeagueSeasonSessionsAsync as jest.Mock).mockResolvedValue({
+                sessions: [],
             });
-
             const result = await getDocument({
                 namespace: 'ldata-irweb',
                 type: 'leagueSeasonSessions',
                 league: 4534,
                 season: 105035,
             });
-
-            expect(result).toEqual(fakeData);
-            expect(mockFetch).toHaveBeenCalledTimes(1);
-            const calledUrl = mockFetch.mock.calls[0][0] as string;
-            expect(calledUrl).toContain('ldata-irweb');
-            expect(calledUrl).toContain('leagueSeasonSessions');
-            expect(calledUrl).toContain('/4534');
-            expect(calledUrl).toContain('/105035');
-            expect(calledUrl).toMatch(/\.json$/);
+            expect(getLeagueSeasonSessionsAsync).toHaveBeenCalledWith(
+                4534,
+                105035
+            );
+            expect(result).toEqual({ sessions: [] });
         });
 
-        test('includes subsession, driver, car, track, sessionType, custId in URL when provided', async () => {
-            mockFetch.mockResolvedValueOnce({ json: async () => ({}) });
-
-            await getDocument({
-                namespace: 'ldata-ns',
-                type: 'someType',
-                league: 1,
-                season: 2,
-                subsession: 3,
-                driver: 4,
-                car: 5,
-                track: 6,
-                sessionType: 7,
-                custId: 8,
+        test('routes leagueSeasons to getLeagueSeasonsAsync', async () => {
+            (getLeagueSeasonsAsync as jest.Mock).mockResolvedValue({
+                seasons: [],
             });
-
-            const calledUrl = mockFetch.mock.calls[0][0] as string;
-            expect(calledUrl).toContain('/1');
-            expect(calledUrl).toContain('/2');
-            expect(calledUrl).toContain('/3');
-            expect(calledUrl).toContain('/4');
-            expect(calledUrl).toContain('/5');
-            expect(calledUrl).toContain('/6');
-            expect(calledUrl).toContain('/7');
-            expect(calledUrl).toContain('/8');
-        });
-
-        test('converts negative numbers to n-prefix in URL', async () => {
-            mockFetch.mockResolvedValueOnce({ json: async () => ({}) });
-
-            await getDocument({
-                namespace: 'ns',
-                type: 'type',
-                simsession: -1,
+            const result = await getDocument({
+                namespace: 'ldata-irweb',
+                type: 'leagueSeasons',
+                league: 4534,
             });
-
-            const calledUrl = mockFetch.mock.calls[0][0] as string;
-            expect(calledUrl).toContain('n1');
+            expect(getLeagueSeasonsAsync).toHaveBeenCalledWith(4534);
+            expect(result).toEqual({ seasons: [] });
         });
 
-        test('returns null when fetch throws an error', async () => {
-            mockFetch.mockRejectedValueOnce(new Error('network error'));
+        test('routes membersData to getMembersDataAsync', async () => {
+            (getMembersDataAsync as jest.Mock).mockResolvedValue({
+                members: [],
+            });
+            const result = await getDocument({
+                namespace: 'ldata-irweb',
+                type: 'membersData',
+                league: 4534,
+                season: 105035,
+            });
+            expect(getMembersDataAsync).toHaveBeenCalledWith(4534, 105035);
+            expect(result).toEqual({ members: [] });
+        });
+    });
 
-            const result = await getDocument({ namespace: 'ns', type: 'type' });
+    describe('ldata-rsltsts', () => {
+        test('routes leagueDriverStats to getLeagueDriverStatsAsync', async () => {
+            (getLeagueDriverStatsAsync as jest.Mock).mockResolvedValue({});
+            await getDocument({
+                namespace: 'ldata-rsltsts',
+                type: 'leagueDriverStats',
+                league: 4534,
+            });
+            expect(getLeagueDriverStatsAsync).toHaveBeenCalledWith(4534);
+        });
+
+        test('routes singleMemberData to getSingleMemberDataAsync (driver key)', async () => {
+            (getSingleMemberDataAsync as jest.Mock).mockResolvedValue({
+                cust_id: 12345,
+            });
+            const result = await getDocument({
+                namespace: 'ldata-rsltsts',
+                type: 'singleMemberData',
+                driver: 12345,
+            });
+            expect(getSingleMemberDataAsync).toHaveBeenCalledWith(12345);
+            expect(result).toEqual({ cust_id: 12345 });
+        });
+    });
+
+    describe('ldata-stward', () => {
+        test('routes rulings to getStewardRulingsAsync', async () => {
+            (getStewardRulingsAsync as jest.Mock).mockResolvedValue([]);
+            await getDocument({
+                namespace: 'ldata-stward',
+                type: 'rulings',
+                league: 6555,
+                season: 99410,
+            });
+            expect(getStewardRulingsAsync).toHaveBeenCalledWith(6555, 99410);
+        });
+    });
+
+    describe('key coercion', () => {
+        test('coerces string keys to numbers before calling loaders', async () => {
+            (getLeagueSeasonSessionsAsync as jest.Mock).mockResolvedValue(null);
+            await getDocument({
+                namespace: 'ldata-irweb',
+                type: 'leagueSeasonSessions',
+                league: '4534',
+                season: '105035',
+            });
+            expect(getLeagueSeasonSessionsAsync).toHaveBeenCalledWith(
+                4534,
+                105035
+            );
+        });
+
+        test('returns null when a required key is missing', async () => {
+            const result = await getDocument({
+                namespace: 'ldata-irweb',
+                type: 'leagueSeasonSessions',
+                league: 4534,
+            });
+            expect(result).toBeNull();
+            expect(getLeagueSeasonSessionsAsync).not.toHaveBeenCalled();
+        });
+
+        test('returns null when a key is non-numeric', async () => {
+            const result = await getDocument({
+                namespace: 'ldata-irweb',
+                type: 'leagueSeasonSessions',
+                league: 'not-a-number',
+                season: 105035,
+            });
+            expect(result).toBeNull();
+            expect(getLeagueSeasonSessionsAsync).not.toHaveBeenCalled();
+        });
+
+        test('returns null when a key is the empty string', async () => {
+            const result = await getDocument({
+                namespace: 'ldata-irweb',
+                type: 'leagueSeasonSessions',
+                league: '',
+                season: 105035,
+            });
+            expect(result).toBeNull();
+            expect(getLeagueSeasonSessionsAsync).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('unknown namespace/type', () => {
+        test('returns null for an unrecognized namespace/type pair', async () => {
+            const result = await getDocument({
+                namespace: 'ldata-unknown',
+                type: 'mystery',
+            });
             expect(result).toBeNull();
         });
 
-        test('returns null when json parsing fails', async () => {
-            mockFetch.mockResolvedValueOnce({
-                json: async () => { throw new Error('invalid json'); },
-            });
-
-            const result = await getDocument({ namespace: 'ns', type: 'type' });
-            expect(result).toBeNull();
+        test('does not call any loader when nothing matches', async () => {
+            await getDocument({ namespace: 'foo', type: 'bar' });
+            expect(getLeagueSeasonSessionsAsync).not.toHaveBeenCalled();
+            expect(getLeagueSeasonsAsync).not.toHaveBeenCalled();
+            expect(getMembersDataAsync).not.toHaveBeenCalled();
+            expect(getLeagueDriverStatsAsync).not.toHaveBeenCalled();
+            expect(getSingleMemberDataAsync).not.toHaveBeenCalled();
+            expect(getStewardRulingsAsync).not.toHaveBeenCalled();
         });
+    });
 
-        test('omits optional path segments when not provided', async () => {
-            mockFetch.mockResolvedValueOnce({ json: async () => ({}) });
-
-            await getDocument({ namespace: 'ldata-ns', type: 'myType' });
-
-            const calledUrl = mockFetch.mock.calls[0][0] as string;
-            expect(calledUrl).toContain('ldata-ns/myType');
-            expect(calledUrl).toMatch(/myType\.json$/);
+    describe('null-on-failure passthrough', () => {
+        test('returns whatever the loader returns, including null', async () => {
+            (getLeagueSeasonsAsync as jest.Mock).mockResolvedValue(null);
+            const result = await getDocument({
+                namespace: 'ldata-irweb',
+                type: 'leagueSeasons',
+                league: 4534,
+            });
+            expect(result).toBeNull();
         });
     });
 });

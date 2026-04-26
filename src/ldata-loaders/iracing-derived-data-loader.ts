@@ -12,6 +12,8 @@ import type {
     SimsessionResults,
     SeasonSimsessionIndex,
     ST_DriverTelemetry,
+    DriverStatsMap,
+    M_Member,
 } from 'ir-endpoint-types';
 import {
     ldataReadFile,
@@ -134,4 +136,30 @@ export async function saveProcessedTelemetryManifestAsync(
         DATASET_PROCESSED_TELEMETRY,
         [leagueId]
     );
+}
+
+export function getLeagueDriverStats(
+    leagueId: number
+): DriverStatsMap | null {
+    return ldataReadFile<DriverStatsMap>(MNT_PT, 'leagueDriverStats', [
+        leagueId,
+    ]);
+}
+
+export function getLeagueDriverStatsAsync(
+    leagueId: number
+): Promise<DriverStatsMap | null> {
+    return ldataReadFileAsync<DriverStatsMap>(MNT_PT, 'leagueDriverStats', [
+        leagueId,
+    ]);
+}
+
+export function getSingleMemberData(custId: number): M_Member | null {
+    return ldataReadFile<M_Member>(MNT_PT, 'singleMemberData', [custId]);
+}
+
+export function getSingleMemberDataAsync(
+    custId: number
+): Promise<M_Member | null> {
+    return ldataReadFileAsync<M_Member>(MNT_PT, 'singleMemberData', [custId]);
 }

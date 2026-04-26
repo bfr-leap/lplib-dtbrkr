@@ -1,3 +1,7 @@
+jest.mock('./ldata-loaders/ldata-stward-data-loader', () => ({
+    getStewardRulingsAsync: jest.fn(),
+}));
+
 import {
     getAllRulings,
     getRulingsByDriver,
@@ -8,9 +12,7 @@ import {
     stewardHandler,
 } from './stward';
 import { sql } from './db';
-
-const mockFetch = jest.fn();
-global.fetch = mockFetch as any;
+import { getStewardRulingsAsync } from './ldata-loaders/ldata-stward-data-loader';
 
 const sampleRulings = [
     {
@@ -78,20 +80,18 @@ const sampleRulings = [
     },
 ];
 
-function mockStwardFetch(payload: any) {
-    mockFetch.mockResolvedValueOnce({
-        json: async () => payload,
-    });
+function mockStwardData(payload: any) {
+    (getStewardRulingsAsync as jest.Mock).mockResolvedValueOnce(payload);
 }
 
 describe('stward - data lake accessors', () => {
     beforeEach(() => {
-        mockFetch.mockReset();
+        (getStewardRulingsAsync as jest.Mock).mockReset();
     });
 
     describe('getAllRulings', () => {
         test('returns rulings array when dataset is a bare array', async () => {
-            mockStwardFetch(sampleRulings);
+            mockStwardData(sampleRulings);
             const result = await getAllRulings('4534', '105035');
             expect(result).toHaveLength(3);
             expect(result[0].license_points).toBe(4);
@@ -99,21 +99,20 @@ describe('stward - data lake accessors', () => {
                 'championship_point_deduction'
             );
 
-            const calledUrl = mockFetch.mock.calls[0][0] as string;
-            expect(calledUrl).toContain('ldata-stward');
-            expect(calledUrl).toContain('rulings');
-            expect(calledUrl).toContain('/4534');
-            expect(calledUrl).toContain('/105035');
+            expect(getStewardRulingsAsync).toHaveBeenCalledWith(4534, 105035);
         });
 
         test('unwraps { rulings: [...] } wrapper', async () => {
-            mockStwardFetch({ rulings: sampleRulings });
+            // The loader's typed return is StewardRuling[], but ldataReadFile
+            // doesn't validate shape — if a file on disk is { rulings: [...] }
+            // the wrapper-unwrap defensive code in stward.ts still triggers.
+            mockStwardData({ rulings: sampleRulings });
             const result = await getAllRulings('4534', '105035');
             expect(result).toHaveLength(3);
         });
 
-        test('returns empty array when fetch returns null', async () => {
-            mockFetch.mockRejectedValueOnce(new Error('not found'));
+        test('returns empty array when loader returns null', async () => {
+            mockStwardData(null);
             const result = await getAllRulings('4534', '105035');
             expect(result).toEqual([]);
         });
@@ -121,7 +120,7 @@ describe('stward - data lake accessors', () => {
 
     describe('getRulingsByDriver', () => {
         test('filters by discord_user_id', async () => {
-            mockStwardFetch(sampleRulings);
+            mockStwardData(sampleRulings);
             const result = await getRulingsByDriver('4534', '105035', {
                 discord_user_id: 'discord-abc',
             });
@@ -133,7 +132,7 @@ describe('stward - data lake accessors', () => {
         });
 
         test('filters by driver_id when discord_user_id not provided', async () => {
-            mockStwardFetch(sampleRulings);
+            mockStwardData(sampleRulings);
             const result = await getRulingsByDriver('4534', '105035', {
                 driver_id: '222',
             });
@@ -142,7 +141,7 @@ describe('stward - data lake accessors', () => {
         });
 
         test('returns empty array when neither id matches', async () => {
-            mockStwardFetch(sampleRulings);
+            mockStwardData(sampleRulings);
             const result = await getRulingsByDriver('4534', '105035', {
                 discord_user_id: 'nobody',
             });
@@ -152,7 +151,7 @@ describe('stward - data lake accessors', () => {
 
     describe('getRulingsBySessionType', () => {
         test('filters by session_type', async () => {
-            mockStwardFetch(sampleRulings);
+            mockStwardData(sampleRulings);
             const result = await getRulingsBySessionType(
                 '4534',
                 '105035',
@@ -166,7 +165,7 @@ describe('stward - data lake accessors', () => {
         });
 
         test('returns empty array when no rulings match session type', async () => {
-            mockStwardFetch(sampleRulings);
+            mockStwardData(sampleRulings);
             const result = await getRulingsBySessionType(
                 '4534',
                 '105035',
@@ -276,7 +275,7 @@ describe('stward - stewardHandler', () => {
     const testLeague = '828282';
 
     beforeEach(() => {
-        mockFetch.mockReset();
+        (getStewardRulingsAsync as jest.Mock).mockReset();
     });
 
     afterEach(async () => {
@@ -284,7 +283,7 @@ describe('stward - stewardHandler', () => {
     });
 
     test('routes "rulings" to getAllRulings', async () => {
-        mockStwardFetch(sampleRulings);
+        mockStwardData(sampleRulings);
         const result = await stewardHandler('ldata-stward', {
             type: 'rulings',
             league: '4534',
@@ -294,7 +293,7 @@ describe('stward - stewardHandler', () => {
     });
 
     test('routes "rulingsByDriver" with discord_user_id', async () => {
-        mockStwardFetch(sampleRulings);
+        mockStwardData(sampleRulings);
         const result = await stewardHandler('ldata-stward', {
             type: 'rulingsByDriver',
             league: '4534',
@@ -305,7 +304,7 @@ describe('stward - stewardHandler', () => {
     });
 
     test('routes "rulingsBySessionType"', async () => {
-        mockStwardFetch(sampleRulings);
+        mockStwardData(sampleRulings);
         const result = await stewardHandler('ldata-stward', {
             type: 'rulingsBySessionType',
             league: '4534',
