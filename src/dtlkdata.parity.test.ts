@@ -2,9 +2,12 @@
 // TEMPORARY: data-lake URL ↔ loader parity test
 // =============================================================================
 //
-// Compares each routing case in `dtlkdata.getDocument` against the legacy
-// GitHub-Pages URL it used to fetch. Goal: confirm the new dispatcher returns
-// the same payload the URL did before we trust the migration in production.
+// Contract: getDocument(query) must return *byte-for-byte identical* data to
+// what the legacy GitHub-Pages URL fetch used to return. Downstream callers
+// (stward.ts, usrcfg.ts, usrdata.ts, page-data-*.ts, valid-util.ts) are not
+// aware the source switched, so any shape or value divergence is a bug —
+// even fields the broker doesn't currently read. The assertion is strict
+// `toEqual`. There is no "but downstream doesn't use that field" exception.
 //
 // Skipped by default so `npm test` in CI stays green. Opt in with:
 //
@@ -12,10 +15,10 @@
 //
 // Requirements when running:
 //   - Network access to https://arturo-mayorga.github.io/irl_stats/
-//   - Local ./public/data/ tree populated for the namespaces under test
-//     (otherwise the loader returns null and the diff just shows "missing
-//     locally"). Set LDATA_ROOT to point elsewhere if your tree lives in a
-//     different directory.
+//   - Local ./public/data/ tree populated for the namespaces under test.
+//     If it's empty, every case will pass trivially (null === null) but
+//     each will emit a "BOTH NULL — INCONCLUSIVE" warning so a green run
+//     against an empty tree can't be mistaken for a real green.
 //
 // Delete this file once parity is confirmed.
 // =============================================================================
@@ -131,15 +134,16 @@ d('dtlkdata URL ↔ loader parity', () => {
                     getDocument(query),
                 ]);
 
-                // Both null = both sources agree the resource doesn't exist.
-                // Don't treat that as a failure here — the user can spot the
-                // case at a glance from the test output. Strict equality
-                // catches any other divergence.
+                // Strict equality always — the dispatcher's contract is
+                // identical bytes to the URL fetch. Both-null still passes
+                // (null === null) but is loud about being inconclusive so an
+                // empty local tree can't masquerade as a green run.
                 if (fromUrl === null && fromLoader === null) {
-                    console.log(
-                        `parity[${name}]: both null (URL ${legacyUrl(query)})`
+                    console.warn(
+                        `parity[${name}]: BOTH NULL — INCONCLUSIVE (URL ${legacyUrl(
+                            query
+                        )})`
                     );
-                    return;
                 }
 
                 expect(fromLoader).toEqual(fromUrl);
