@@ -1,4 +1,4 @@
-import { Kafka, Producer } from 'kafkajs';
+import { Kafka, type Producer } from 'kafkajs';
 
 const BROKER = 'leap-relay1:9092';
 const CLIENT_ID = 'lplib-ldloadutl';

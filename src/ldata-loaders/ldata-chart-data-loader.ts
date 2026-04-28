@@ -4,7 +4,7 @@ import {
     ldataReadFile,
     ldataReadFileAsync,
 } from './fsutil';
-import { ChartTable } from 'ir-endpoint-types';
+import type { ChartTable } from 'ir-endpoint-types';
 
 const MNT_PT = './public/data/ldata-charts/';
 
