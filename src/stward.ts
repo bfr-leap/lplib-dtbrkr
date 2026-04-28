@@ -1,4 +1,4 @@
-import { StewardRuling, StewardConfig } from 'ir-endpoint-types';
+import type { StewardRuling, StewardConfig } from 'ir-endpoint-types';
 import { getDocument as getDataLakeDocument } from './dtlkdata';
 import { sql } from './db';
 
