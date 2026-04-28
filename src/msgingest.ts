@@ -1,4 +1,4 @@
-import { TracktalkRawMessage } from 'ir-endpoint-types';
+import type { TracktalkRawMessage } from 'ir-endpoint-types';
 import { sql } from './db';
 
 export async function createRawMessageIngest(msg: {
