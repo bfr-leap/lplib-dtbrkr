@@ -21,7 +21,12 @@ import type {
     M_Helmet,
     SubsessionTelemetry,
 } from 'ir-endpoint-types';
-import { ldataReadFile, ldataReadFileAsync } from './fsutil';
+import {
+    ldataReadFile,
+    ldataReadFileAsync,
+    ldataWriteFile,
+    ldataWriteFileAsync,
+} from './fsutil';
 
 // TODO(upstream): move this interface to `ir-endpoint-types`. Mirrors the
 // shape documented in `data-catalog/data-catalog.md` and confirmed against
@@ -179,4 +184,15 @@ export function getLeagueRosterAsync(
     leagueId: number
 ): Promise<LeagueRoster | null> {
     return ldataReadFileAsync<LeagueRoster>(MNT_PT, 'leagueRoster', [leagueId]);
+}
+
+export function saveLeagueRoster(leagueId: number, data: LeagueRoster): void {
+    ldataWriteFile(data, MNT_PT, 'leagueRoster', [leagueId]);
+}
+
+export function saveLeagueRosterAsync(
+    leagueId: number,
+    data: LeagueRoster
+): Promise<void> {
+    return ldataWriteFileAsync(data, MNT_PT, 'leagueRoster', [leagueId]);
 }

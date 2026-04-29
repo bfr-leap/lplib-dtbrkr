@@ -18,13 +18,23 @@ function mountPointToDatasetId(mountPoint: string): string {
 //     writeFileSync(`${path}${newName}.json`, JSON.stringify(obj));
 // }
 
+// Numeric keys get the `n` prefix on negative values; string keys (e.g. the
+// `sessionType` segment in `driverSessionResults/{league}/{race|sprint|quali}/
+// {cust}`) pass through verbatim. Mixed keys let one helper cover both
+// numeric- and string-segmented paths.
+type LdataKey = number | string;
+
+function encodeKey(k: LdataKey): string {
+    return typeof k === 'number' && k < 0 ? `n${-k}` : String(k);
+}
+
 export function ldataWriteFile(
     obj: any,
     mountPoint: string,
     datasetName: string,
-    keys: number[]
+    keys: LdataKey[]
 ) {
-    let keyStrings = keys.map((k) => (k < 0 ? `n${-k}` : `${k}`));
+    let keyStrings = keys.map(encodeKey);
     const path = `${mountPoint}${datasetName}/${keyStrings
         .slice(0, -1)
         .join('/')}`;
@@ -41,9 +51,9 @@ export async function ldataWriteFileAsync(
     obj: any,
     mountPoint: string,
     datasetName: string,
-    keys: number[]
+    keys: LdataKey[]
 ): Promise<void> {
-    let keyStrings = keys.map((k) => (k < 0 ? `n${-k}` : `${k}`));
+    let keyStrings = keys.map(encodeKey);
     const path = `${mountPoint}${datasetName}/${keyStrings
         .slice(0, -1)
         .join('/')}`;
@@ -65,9 +75,9 @@ export async function ldataWriteFileAsync(
 export function ldataReadFile<T>(
     mountPoint: string,
     datasetName: string,
-    keys: number[]
+    keys: LdataKey[]
 ): T | null {
-    let keyStrings = keys.map((k) => (k < 0 ? `n${-k}` : `${k}`));
+    let keyStrings = keys.map(encodeKey);
     try {
         let ret: T = JSON.parse(
             readFileSync(
@@ -88,9 +98,9 @@ export function ldataReadFile<T>(
 export async function ldataReadFileAsync<T>(
     mountPoint: string,
     datasetName: string,
-    keys: number[]
+    keys: LdataKey[]
 ): Promise<T | null> {
-    let keyStrings = keys.map((k) => (k < 0 ? `n${-k}` : `${k}`));
+    let keyStrings = keys.map(encodeKey);
     try {
         let ret: T = JSON.parse(
             await readFile(

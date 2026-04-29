@@ -8,9 +8,6 @@
  *
  */
 
-import { readFileSync } from 'fs';
-import { readFile } from 'fs/promises';
-
 import type {
     DriverResults,
     SimsessionResults,
@@ -188,6 +185,20 @@ export function getTrackInfoDirectoryAsync(
     );
 }
 
+export function saveTrackInfoDirectory(
+    leagueId: number,
+    data: TrackInfoDirectory
+): void {
+    ldataWriteFile(data, MNT_PT, 'trackInfoDirectory', [leagueId]);
+}
+
+export function saveTrackInfoDirectoryAsync(
+    leagueId: number,
+    data: TrackInfoDirectory
+): Promise<void> {
+    return ldataWriteFileAsync(data, MNT_PT, 'trackInfoDirectory', [leagueId]);
+}
+
 export function getTrackResults(
     leagueId: number,
     carId: number,
@@ -212,40 +223,78 @@ export function getTrackResultsAsync(
     ]);
 }
 
-// `driverSessionResults` has a string session-type key (`race`, `sprint`,
-// `quali`) between two numeric keys, so the numeric `ldataReadFile` path
-// builder can't represent it. Read directly and honor the dispatcher's
-// null-on-failure contract.
+export function saveTrackResults(
+    leagueId: number,
+    carId: number,
+    trackId: number,
+    data: TrackStats
+): void {
+    ldataWriteFile(data, MNT_PT, 'trackResults', [leagueId, carId, trackId]);
+}
+
+export function saveTrackResultsAsync(
+    leagueId: number,
+    carId: number,
+    trackId: number,
+    data: TrackStats
+): Promise<void> {
+    return ldataWriteFileAsync(data, MNT_PT, 'trackResults', [
+        leagueId,
+        carId,
+        trackId,
+    ]);
+}
+
+// `driverSessionResults` is keyed by (leagueId, sessionType, custId) where
+// `sessionType` is a string segment (`race`, `sprint`, `quali`). The fsutil
+// helpers accept mixed numeric/string keys, so this slots into the same
+// path-builder + Kafka notify pipeline as the all-numeric datasets.
 export function getDriverSessionResults(
     leagueId: number,
     sessionType: string,
     custId: number
 ): DriverResults | null {
-    try {
-        return JSON.parse(
-            readFileSync(
-                `${MNT_PT}driverSessionResults/${leagueId}/${sessionType}/${custId}.json`,
-                { encoding: 'utf8', flag: 'r' }
-            )
-        ) as DriverResults;
-    } catch {
-        return null;
-    }
+    return ldataReadFile<DriverResults>(MNT_PT, 'driverSessionResults', [
+        leagueId,
+        sessionType,
+        custId,
+    ]);
 }
 
-export async function getDriverSessionResultsAsync(
+export function getDriverSessionResultsAsync(
     leagueId: number,
     sessionType: string,
     custId: number
 ): Promise<DriverResults | null> {
-    try {
-        return JSON.parse(
-            await readFile(
-                `${MNT_PT}driverSessionResults/${leagueId}/${sessionType}/${custId}.json`,
-                { encoding: 'utf8', flag: 'r' }
-            )
-        ) as DriverResults;
-    } catch {
-        return null;
-    }
+    return ldataReadFileAsync<DriverResults>(MNT_PT, 'driverSessionResults', [
+        leagueId,
+        sessionType,
+        custId,
+    ]);
+}
+
+export function saveDriverSessionResults(
+    leagueId: number,
+    sessionType: string,
+    custId: number,
+    data: DriverResults
+): void {
+    ldataWriteFile(data, MNT_PT, 'driverSessionResults', [
+        leagueId,
+        sessionType,
+        custId,
+    ]);
+}
+
+export function saveDriverSessionResultsAsync(
+    leagueId: number,
+    sessionType: string,
+    custId: number,
+    data: DriverResults
+): Promise<void> {
+    return ldataWriteFileAsync(data, MNT_PT, 'driverSessionResults', [
+        leagueId,
+        sessionType,
+        custId,
+    ]);
 }

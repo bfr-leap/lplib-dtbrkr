@@ -34,11 +34,13 @@ function init(): Promise<void> {
 export function notifyWrite(
     datasetId: string,
     datasetName: string,
-    keys: number[]
+    keys: (number | string)[]
 ): void {
     if (disabled) return;
 
-    const keyStrings = keys.map((k) => (k < 0 ? `n${-k}` : `${k}`));
+    const keyStrings = keys.map((k) =>
+        typeof k === 'number' && k < 0 ? `n${-k}` : String(k)
+    );
     const affectedField = [datasetName, ...keyStrings].join('/');
     const summaryKeys = keys.join(':');
 

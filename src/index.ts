@@ -47,6 +47,10 @@ export {
     getLeagueSeasonSessionsAsync,
     getLapChartDataAsync,
     getMembersDataAsync,
+    getLeagueRoster,
+    getLeagueRosterAsync,
+    saveLeagueRoster,
+    saveLeagueRosterAsync,
 } from './ldata-loaders/iracing-scraped-data-loader';
 
 export {
@@ -64,6 +68,18 @@ export {
     getLeagueDriverStatsAsync,
     getSingleMemberData,
     getSingleMemberDataAsync,
+    getTrackInfoDirectory,
+    getTrackInfoDirectoryAsync,
+    saveTrackInfoDirectory,
+    saveTrackInfoDirectoryAsync,
+    getTrackResults,
+    getTrackResultsAsync,
+    saveTrackResults,
+    saveTrackResultsAsync,
+    getDriverSessionResults,
+    getDriverSessionResultsAsync,
+    saveDriverSessionResults,
+    saveDriverSessionResultsAsync,
 } from './ldata-loaders/iracing-derived-data-loader';
 
 // `getActiveLeagueSchedule` is also the name of the SQL-backed accessor
@@ -143,6 +159,7 @@ export {
     saveCumulativeDeltaChartData,
     saveCumulativeDeltaBestLapChartData,
     savePacePercentVsIdealLapChartData,
+    getPacePercentChartData,
     savePacePercentChartData,
     getStartFinishChartDataAsync,
     saveStartFinishChartDataAsync,
@@ -150,6 +167,7 @@ export {
     saveCumulativeDeltaChartDataAsync,
     saveCumulativeDeltaBestLapChartDataAsync,
     savePacePercentVsIdealLapChartDataAsync,
+    getPacePercentChartDataAsync,
     savePacePercentChartDataAsync,
 } from './ldata-loaders/ldata-chart-data-loader';
 
