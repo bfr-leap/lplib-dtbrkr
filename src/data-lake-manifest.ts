@@ -69,11 +69,73 @@ export const DATA_LAKE_ENDPOINTS: ReadonlyArray<DataLakeEndpoint> = [
     {
         namespace: 'ldata-rsltsts',
         type: 'singleMemberData',
-        exampleQuery: { driver: 12345 },
+        // The dispatcher accepts `custId` or `driver` (aliases). `custId` is
+        // the canonical name used by the REST API and the loader signature.
+        exampleQuery: { custId: 12345 },
+    },
+    {
+        namespace: 'ldata-rsltsts',
+        type: 'trackInfoDirectory',
+        exampleQuery: { league: 4534 },
+    },
+    {
+        namespace: 'ldata-rsltsts',
+        type: 'trackResults',
+        exampleQuery: { league: 4534, car: 106, track: 341 },
     },
     {
         namespace: 'ldata-stward',
         type: 'rulings',
         exampleQuery: { league: 6555, season: 99410 },
+    },
+    {
+        namespace: 'ldata-irweb',
+        type: 'lapChartData',
+        exampleQuery: { subsession: 85056343, simsession: 0 },
+    },
+    {
+        namespace: 'ldata-rsltsts',
+        type: 'simSessionResults',
+        exampleQuery: { subsession: 85228727, simsession: 0 },
+    },
+    {
+        namespace: 'ldata-gentxt',
+        type: 'simsessionSummary',
+        exampleQuery: { subsession: 85228727, simsession: 0 },
+    },
+    {
+        namespace: 'ldata-irrpy',
+        type: 'telemetrySubsessions',
+        exampleQuery: { league: 4534 },
+    },
+    {
+        namespace: 'ldata-charts',
+        type: 'startFinishChartData',
+        exampleQuery: { league: 4534, subsession: 85056343, simsession: 0 },
+    },
+    {
+        namespace: 'ldata-charts',
+        type: 'cumulativeDeltaChartData',
+        exampleQuery: { league: 4534, subsession: 85056343, simsession: 0 },
+    },
+    {
+        namespace: 'ldata-charts',
+        type: 'pacePercentChartData',
+        exampleQuery: { league: 4534, subsession: 85228727, simsession: -3 },
+    },
+    {
+        namespace: 'ldata-irweb',
+        type: 'leagueRoster',
+        exampleQuery: { league: 4534 },
+    },
+    {
+        namespace: 'ldata-rsltsts',
+        type: 'driverSessionResults',
+        exampleQuery: { league: 4534, sessionType: 'race', custId: 555362 },
+    },
+    {
+        namespace: 'ldata-gentxt',
+        type: 'dotdProfile',
+        exampleQuery: { league: 4534, custId: 555362 },
     },
 ];

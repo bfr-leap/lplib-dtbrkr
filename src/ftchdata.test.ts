@@ -1,17 +1,17 @@
-jest.mock('./usrdata', () => ({
-    userDataHandler: jest.fn(async () => ({ type: 'usrdata-result' })),
+vi.mock('./usrdata', () => ({
+    userDataHandler: vi.fn(async () => ({ type: 'usrdata-result' })),
 }));
 
-jest.mock('./usrcfg', () => ({
-    userConfigHandler: jest.fn(async () => ({ type: 'usrcfg-result' })),
+vi.mock('./usrcfg', () => ({
+    userConfigHandler: vi.fn(async () => ({ type: 'usrcfg-result' })),
 }));
 
-jest.mock('./admcfg', () => ({
-    adminConfigHandler: jest.fn(async () => ({ type: 'admcfg-result' })),
+vi.mock('./admcfg', () => ({
+    adminConfigHandler: vi.fn(async () => ({ type: 'admcfg-result' })),
 }));
 
-jest.mock('./dtlkdata', () => ({
-    getDocument: jest.fn(async () => ({ type: 'dtlkdata-result' })),
+vi.mock('./dtlkdata', () => ({
+    getDocument: vi.fn(async () => ({ type: 'dtlkdata-result' })),
 }));
 
 import { getDocument } from './ftchdata';
@@ -22,7 +22,7 @@ import { getDocument as getDataLakeDocument } from './dtlkdata';
 
 describe('ftchdata', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     describe('getDocument', () => {
@@ -61,7 +61,7 @@ describe('ftchdata', () => {
         });
 
         test('passes authMiddleware to userDataHandler when provided', async () => {
-            const middleware = jest.fn(async (_ns: string, _q: any, next: Function) => next(_ns, _q));
+            const middleware = vi.fn(async (_ns: string, _q: any, next: Function) => next(_ns, _q));
             const query = { type: 'userFeatures', userID: 'user123' };
             await getDocument('ldata-usrdata', query, middleware);
 
@@ -69,7 +69,7 @@ describe('ftchdata', () => {
         });
 
         test('passes authMiddleware to adminConfigHandler when provided', async () => {
-            const middleware = jest.fn(async (_ns: string, _q: any, next: Function) => next(_ns, _q));
+            const middleware = vi.fn(async (_ns: string, _q: any, next: Function) => next(_ns, _q));
             const query = { type: 'crtSchedEvent', userID: 'user123' };
             await getDocument('ldata-admcfg', query, middleware);
 

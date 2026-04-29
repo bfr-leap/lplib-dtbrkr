@@ -1,6 +1,7 @@
-jest.mock('fs');
-jest.mock('fs/promises');
-jest.mock('./kafka-notify', () => ({ notifyWrite: jest.fn() }));
+import type { Mock } from 'vitest';
+vi.mock('fs');
+vi.mock('fs/promises');
+vi.mock('./kafka-notify', () => ({ notifyWrite: vi.fn() }));
 
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { readFile, writeFile, mkdir, stat } from 'fs/promises';
@@ -30,13 +31,13 @@ import {
 const MNT = './public/data/ldata-trkevts/';
 
 beforeEach(() => {
-    jest.clearAllMocks();
-    (existsSync as jest.Mock).mockReturnValue(true);
-    (readFileSync as jest.Mock).mockReturnValue('{"events":[]}');
-    (stat as jest.Mock).mockResolvedValue({});
-    (readFile as jest.Mock).mockResolvedValue('{"events":[]}');
-    (writeFile as jest.Mock).mockResolvedValue(undefined);
-    (mkdir as jest.Mock).mockResolvedValue(undefined);
+    vi.clearAllMocks();
+    (existsSync as Mock).mockReturnValue(true);
+    (readFileSync as Mock).mockReturnValue('{"events":[]}');
+    (stat as Mock).mockResolvedValue({});
+    (readFile as Mock).mockResolvedValue('{"events":[]}');
+    (writeFile as Mock).mockResolvedValue(undefined);
+    (mkdir as Mock).mockResolvedValue(undefined);
 });
 
 const pairs: Array<{
@@ -87,7 +88,7 @@ describe.each(pairs)('trkevts $name', ({ dataset, getter, saver }) => {
     });
 
     it('returns null when the read fails', () => {
-        (readFileSync as jest.Mock).mockImplementation(() => {
+        (readFileSync as Mock).mockImplementation(() => {
             throw new Error('ENOENT');
         });
         expect(getter(1, 2, 3)).toBeNull();
@@ -152,7 +153,7 @@ describe.each(asyncPairs)(
         });
 
         it('returns null when the read fails', async () => {
-            (readFile as jest.Mock).mockRejectedValue(new Error('ENOENT'));
+            (readFile as Mock).mockRejectedValue(new Error('ENOENT'));
             await expect(getter(1, 2, 3)).resolves.toBeNull();
         });
 

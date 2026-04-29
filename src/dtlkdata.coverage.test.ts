@@ -3,7 +3,9 @@
 //
 // Iterates every entry in `DATA_LAKE_ENDPOINTS` and asserts that the
 // dispatcher in `src/dtlkdata.ts` either routes it to a loader (returning a
-// non-null sentinel) or has it explicitly marked `unshadowed` with a reason.
+// non-`UNHANDLED` value) or has it explicitly marked `unshadowed` with a
+// reason (in which case the dispatcher is expected to fall through and
+// return the `UNHANDLED` sentinel).
 //
 // Each loader module is mocked with a Proxy whose `get` returns an async
 // function resolving to a SENTINEL value, so we don't need to maintain a
@@ -11,46 +13,32 @@
 // =============================================================================
 
 // Auto-stub every export of every loader module the dispatcher imports.
-// Returning a function for any property name (including ts-jest's
-// `__esModule` interop probe) makes `import { fooAsync } from 'mod'`
-// resolve to `() => Promise.resolve(SENTINEL_RESULT)`. The factory has
-// to be inlined: Jest hoists `jest.mock(...)` calls above all source-file
-// declarations, so the factory cannot reference outer module bindings.
-jest.mock('./ldata-loaders/iracing-scraped-data-loader', () =>
-    new Proxy(
-        {},
-        {
-            get: (_t, prop) => {
-                if (prop === '__esModule') return true;
-                return async () => ({ __coverage_sentinel: true });
-            },
+// We use `importOriginal` to discover the real export names and replace each
+// with an async stub that returns a sentinel object. This avoids hand-listing
+// per-export mocks (any new loader function is auto-covered) while still
+// satisfying Vitest's named-import validator, which checks that each import
+// name is actually present on the mock module.
+const { stubAll } = vi.hoisted(() => ({
+    stubAll: async (
+        importOriginal: () => Promise<Record<string, unknown>>
+    ): Promise<Record<string, unknown>> => {
+        const actual = await importOriginal();
+        const stubs: Record<string, unknown> = {};
+        for (const key of Object.keys(actual)) {
+            stubs[key] = async () => ({ __coverage_sentinel: true });
         }
-    )
-);
-jest.mock('./ldata-loaders/iracing-derived-data-loader', () =>
-    new Proxy(
-        {},
-        {
-            get: (_t, prop) => {
-                if (prop === '__esModule') return true;
-                return async () => ({ __coverage_sentinel: true });
-            },
-        }
-    )
-);
-jest.mock('./ldata-loaders/ldata-stward-data-loader', () =>
-    new Proxy(
-        {},
-        {
-            get: (_t, prop) => {
-                if (prop === '__esModule') return true;
-                return async () => ({ __coverage_sentinel: true });
-            },
-        }
-    )
-);
+        return stubs;
+    },
+}));
 
-import { getFromLoader } from './dtlkdata';
+vi.mock('./ldata-loaders/iracing-scraped-data-loader', stubAll);
+vi.mock('./ldata-loaders/iracing-derived-data-loader', stubAll);
+vi.mock('./ldata-loaders/ldata-stward-data-loader', stubAll);
+vi.mock('./ldata-loaders/ldata-chart-data-loader', stubAll);
+vi.mock('./ldata-loaders/ldata-gentxt-data-loader', stubAll);
+vi.mock('./ldata-loaders/ldata-irrpy-data-loader', stubAll);
+
+import { getFromLoader, UNHANDLED } from './dtlkdata';
 import {
     DATA_LAKE_ENDPOINTS,
     type DataLakeEndpoint,
@@ -79,8 +67,8 @@ describe('data-lake dispatcher coverage', () => {
         (_name, entry) => {
             test(
                 entry.unshadowed
-                    ? `is exempt from shadow-mode (reason: ${entry.unshadowed.reason}) — dispatcher must return null`
-                    : 'is wired into the dispatcher — must return non-null for a valid query',
+                    ? `is exempt from shadow-mode (reason: ${entry.unshadowed.reason}) — dispatcher must fall through to UNHANDLED`
+                    : 'is wired into the dispatcher — must NOT fall through to UNHANDLED',
                 async () => {
                     const result = await getFromLoader({
                         namespace: entry.namespace,
@@ -89,13 +77,13 @@ describe('data-lake dispatcher coverage', () => {
                     });
 
                     if (entry.unshadowed) {
-                        expect(result).toBeNull();
+                        expect(result).toBe(UNHANDLED);
                     } else {
                         // If this fails, you added a manifest entry without
                         // wiring the case in src/dtlkdata.ts (or the
                         // exampleQuery is missing keys the dispatcher
                         // requires before reaching the loader call).
-                        expect(result).not.toBeNull();
+                        expect(result).not.toBe(UNHANDLED);
                     }
                 }
             );

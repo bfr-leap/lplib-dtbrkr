@@ -8,12 +8,18 @@
  *
  */
 
+import { readFileSync } from 'fs';
+import { readFile } from 'fs/promises';
+
 import type {
+    DriverResults,
     SimsessionResults,
     SeasonSimsessionIndex,
     ST_DriverTelemetry,
     DriverStatsMap,
     M_Member,
+    TrackInfoDirectory,
+    TrackStats,
 } from 'ir-endpoint-types';
 import {
     ldataReadFile,
@@ -162,4 +168,84 @@ export function getSingleMemberDataAsync(
     custId: number
 ): Promise<M_Member | null> {
     return ldataReadFileAsync<M_Member>(MNT_PT, 'singleMemberData', [custId]);
+}
+
+export function getTrackInfoDirectory(
+    leagueId: number
+): TrackInfoDirectory | null {
+    return ldataReadFile<TrackInfoDirectory>(MNT_PT, 'trackInfoDirectory', [
+        leagueId,
+    ]);
+}
+
+export function getTrackInfoDirectoryAsync(
+    leagueId: number
+): Promise<TrackInfoDirectory | null> {
+    return ldataReadFileAsync<TrackInfoDirectory>(
+        MNT_PT,
+        'trackInfoDirectory',
+        [leagueId]
+    );
+}
+
+export function getTrackResults(
+    leagueId: number,
+    carId: number,
+    trackId: number
+): TrackStats | null {
+    return ldataReadFile<TrackStats>(MNT_PT, 'trackResults', [
+        leagueId,
+        carId,
+        trackId,
+    ]);
+}
+
+export function getTrackResultsAsync(
+    leagueId: number,
+    carId: number,
+    trackId: number
+): Promise<TrackStats | null> {
+    return ldataReadFileAsync<TrackStats>(MNT_PT, 'trackResults', [
+        leagueId,
+        carId,
+        trackId,
+    ]);
+}
+
+// `driverSessionResults` has a string session-type key (`race`, `sprint`,
+// `quali`) between two numeric keys, so the numeric `ldataReadFile` path
+// builder can't represent it. Read directly and honor the dispatcher's
+// null-on-failure contract.
+export function getDriverSessionResults(
+    leagueId: number,
+    sessionType: string,
+    custId: number
+): DriverResults | null {
+    try {
+        return JSON.parse(
+            readFileSync(
+                `${MNT_PT}driverSessionResults/${leagueId}/${sessionType}/${custId}.json`,
+                { encoding: 'utf8', flag: 'r' }
+            )
+        ) as DriverResults;
+    } catch {
+        return null;
+    }
+}
+
+export async function getDriverSessionResultsAsync(
+    leagueId: number,
+    sessionType: string,
+    custId: number
+): Promise<DriverResults | null> {
+    try {
+        return JSON.parse(
+            await readFile(
+                `${MNT_PT}driverSessionResults/${leagueId}/${sessionType}/${custId}.json`,
+                { encoding: 'utf8', flag: 'r' }
+            )
+        ) as DriverResults;
+    } catch {
+        return null;
+    }
 }

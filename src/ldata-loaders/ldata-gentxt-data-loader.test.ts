@@ -1,6 +1,7 @@
-jest.mock('fs');
-jest.mock('fs/promises');
-jest.mock('./kafka-notify', () => ({ notifyWrite: jest.fn() }));
+import type { Mock } from 'vitest';
+vi.mock('fs');
+vi.mock('fs/promises');
+vi.mock('./kafka-notify', () => ({ notifyWrite: vi.fn() }));
 
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { readFile, writeFile, mkdir, stat } from 'fs/promises';
@@ -22,16 +23,16 @@ import {
 const MNT = './public/data/ldata-gentxt/';
 
 beforeEach(() => {
-    jest.clearAllMocks();
-    (existsSync as jest.Mock).mockReturnValue(true);
-    (stat as jest.Mock).mockResolvedValue({});
-    (writeFile as jest.Mock).mockResolvedValue(undefined);
-    (mkdir as jest.Mock).mockResolvedValue(undefined);
+    vi.clearAllMocks();
+    (existsSync as Mock).mockReturnValue(true);
+    (stat as Mock).mockResolvedValue({});
+    (writeFile as Mock).mockResolvedValue(undefined);
+    (mkdir as Mock).mockResolvedValue(undefined);
 });
 
 describe('simsessionSummary', () => {
     it('reads from the expected path', () => {
-        (readFileSync as jest.Mock).mockReturnValue('{"text":"ok"}');
+        (readFileSync as Mock).mockReturnValue('{"text":"ok"}');
         expect(getSimsessionSummary(111, 0)).toEqual({ text: 'ok' });
         expect(readFileSync).toHaveBeenCalledWith(
             `${MNT}simsessionSummary/111/0.json`,
@@ -40,7 +41,7 @@ describe('simsessionSummary', () => {
     });
 
     it('returns null on missing file', () => {
-        (readFileSync as jest.Mock).mockImplementation(() => {
+        (readFileSync as Mock).mockImplementation(() => {
             throw new Error('ENOENT');
         });
         expect(getSimsessionSummary(111, 0)).toBeNull();
@@ -57,7 +58,7 @@ describe('simsessionSummary', () => {
 
 describe('dotdProfile', () => {
     it('reads by (leagueId, custId)', () => {
-        (readFileSync as jest.Mock).mockReturnValue('{"name":"a"}');
+        (readFileSync as Mock).mockReturnValue('{"name":"a"}');
         expect(getDotdProfile(42, 999)).toEqual({ name: 'a' });
         expect(readFileSync).toHaveBeenCalledWith(
             `${MNT}dotdProfile/42/999.json`,
@@ -76,14 +77,14 @@ describe('dotdProfile', () => {
 
 describe('dotdManifest', () => {
     it('returns an empty array when the file does not exist', () => {
-        (readFileSync as jest.Mock).mockImplementation(() => {
+        (readFileSync as Mock).mockImplementation(() => {
             throw new Error('ENOENT');
         });
         expect(getDotdManifest(42, 7)).toEqual([]);
     });
 
     it('returns the parsed array when present', () => {
-        (readFileSync as jest.Mock).mockReturnValue('[{"id":1}]');
+        (readFileSync as Mock).mockReturnValue('[{"id":1}]');
         expect(getDotdManifest(42, 7)).toEqual([{ id: 1 }]);
     });
 
@@ -98,7 +99,7 @@ describe('dotdManifest', () => {
 
 describe('simsessionSummary async', () => {
     it('reads from the expected path', async () => {
-        (readFile as jest.Mock).mockResolvedValue('{"text":"ok"}');
+        (readFile as Mock).mockResolvedValue('{"text":"ok"}');
         await expect(getSimsessionSummaryAsync(111, 0)).resolves.toEqual({
             text: 'ok',
         });
@@ -109,7 +110,7 @@ describe('simsessionSummary async', () => {
     });
 
     it('returns null on missing file', async () => {
-        (readFile as jest.Mock).mockRejectedValue(new Error('ENOENT'));
+        (readFile as Mock).mockRejectedValue(new Error('ENOENT'));
         await expect(getSimsessionSummaryAsync(111, 0)).resolves.toBeNull();
     });
 
@@ -124,7 +125,7 @@ describe('simsessionSummary async', () => {
 
 describe('dotdProfile async', () => {
     it('reads by (leagueId, custId)', async () => {
-        (readFile as jest.Mock).mockResolvedValue('{"name":"a"}');
+        (readFile as Mock).mockResolvedValue('{"name":"a"}');
         await expect(getDotdProfileAsync(42, 999)).resolves.toEqual({
             name: 'a',
         });
@@ -145,12 +146,12 @@ describe('dotdProfile async', () => {
 
 describe('dotdManifest async', () => {
     it('returns an empty array when the file does not exist', async () => {
-        (readFile as jest.Mock).mockRejectedValue(new Error('ENOENT'));
+        (readFile as Mock).mockRejectedValue(new Error('ENOENT'));
         await expect(getDotdManifestAsync(42, 7)).resolves.toEqual([]);
     });
 
     it('returns the parsed array when present', async () => {
-        (readFile as jest.Mock).mockResolvedValue('[{"id":1}]');
+        (readFile as Mock).mockResolvedValue('[{"id":1}]');
         await expect(getDotdManifestAsync(42, 7)).resolves.toEqual([{ id: 1 }]);
     });
 

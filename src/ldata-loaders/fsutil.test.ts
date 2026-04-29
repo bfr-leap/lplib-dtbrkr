@@ -1,7 +1,8 @@
-jest.mock('fs');
-jest.mock('fs/promises');
-jest.mock('./kafka-notify', () => ({
-    notifyWrite: jest.fn(),
+import type { Mock } from 'vitest';
+vi.mock('fs');
+vi.mock('fs/promises');
+vi.mock('./kafka-notify', () => ({
+    notifyWrite: vi.fn(),
 }));
 
 import { writeFileSync, existsSync, mkdirSync, readFileSync } from 'fs';
@@ -16,8 +17,8 @@ import { notifyWrite } from './kafka-notify';
 
 describe('ldataWriteFile', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
-        (existsSync as jest.Mock).mockReturnValue(true);
+        vi.clearAllMocks();
+        (existsSync as Mock).mockReturnValue(true);
     });
 
     it('writes the file to the expected path', () => {
@@ -49,7 +50,7 @@ describe('ldataWriteFile', () => {
     });
 
     it('creates parent directories when missing', () => {
-        (existsSync as jest.Mock).mockReturnValue(false);
+        (existsSync as Mock).mockReturnValue(false);
 
         ldataWriteFile({}, './public/data/ldata-gentxt/', 'd', [1, 2]);
 
@@ -76,10 +77,10 @@ describe('ldataWriteFile', () => {
 
     it('writes the file before emitting the notification', () => {
         const order: string[] = [];
-        (writeFileSync as jest.Mock).mockImplementation(() =>
+        (writeFileSync as Mock).mockImplementation(() =>
             order.push('write')
         );
-        (notifyWrite as jest.Mock).mockImplementation(() =>
+        (notifyWrite as Mock).mockImplementation(() =>
             order.push('notify')
         );
 
@@ -91,11 +92,11 @@ describe('ldataWriteFile', () => {
 
 describe('ldataReadFile', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     it('returns parsed JSON for an existing file', () => {
-        (readFileSync as jest.Mock).mockReturnValue('{"a":1}');
+        (readFileSync as Mock).mockReturnValue('{"a":1}');
 
         const result = ldataReadFile<{ a: number }>(
             './public/data/ldata-charts/',
@@ -107,7 +108,7 @@ describe('ldataReadFile', () => {
     });
 
     it('returns null when the read throws', () => {
-        (readFileSync as jest.Mock).mockImplementation(() => {
+        (readFileSync as Mock).mockImplementation(() => {
             throw new Error('ENOENT');
         });
 
@@ -117,7 +118,7 @@ describe('ldataReadFile', () => {
     });
 
     it('encodes negative keys with n prefix in the read path', () => {
-        (readFileSync as jest.Mock).mockReturnValue('null');
+        (readFileSync as Mock).mockReturnValue('null');
 
         ldataReadFile('./public/data/ldata-charts/', 'd', [-5, 10]);
 
@@ -128,7 +129,7 @@ describe('ldataReadFile', () => {
     });
 
     it('does not invoke notifyWrite on reads', () => {
-        (readFileSync as jest.Mock).mockReturnValue('{}');
+        (readFileSync as Mock).mockReturnValue('{}');
 
         ldataReadFile('./public/data/ldata-charts/', 'd', [1]);
 
@@ -138,10 +139,10 @@ describe('ldataReadFile', () => {
 
 describe('ldataWriteFileAsync', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
-        (stat as jest.Mock).mockResolvedValue({});
-        (writeFile as jest.Mock).mockResolvedValue(undefined);
-        (mkdir as jest.Mock).mockResolvedValue(undefined);
+        vi.clearAllMocks();
+        (stat as Mock).mockResolvedValue({});
+        (writeFile as Mock).mockResolvedValue(undefined);
+        (mkdir as Mock).mockResolvedValue(undefined);
     });
 
     it('writes the file to the expected path', async () => {
@@ -173,7 +174,7 @@ describe('ldataWriteFileAsync', () => {
     });
 
     it('creates parent directories when missing', async () => {
-        (stat as jest.Mock).mockRejectedValue(new Error('ENOENT'));
+        (stat as Mock).mockRejectedValue(new Error('ENOENT'));
 
         await ldataWriteFileAsync(
             {},
@@ -215,10 +216,10 @@ describe('ldataWriteFileAsync', () => {
 
     it('writes the file before emitting the notification', async () => {
         const order: string[] = [];
-        (writeFile as jest.Mock).mockImplementation(async () =>
+        (writeFile as Mock).mockImplementation(async () =>
             order.push('write')
         );
-        (notifyWrite as jest.Mock).mockImplementation(() =>
+        (notifyWrite as Mock).mockImplementation(() =>
             order.push('notify')
         );
 
@@ -230,11 +231,11 @@ describe('ldataWriteFileAsync', () => {
 
 describe('ldataReadFileAsync', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     it('returns parsed JSON for an existing file', async () => {
-        (readFile as jest.Mock).mockResolvedValue('{"a":1}');
+        (readFile as Mock).mockResolvedValue('{"a":1}');
 
         const result = await ldataReadFileAsync<{ a: number }>(
             './public/data/ldata-charts/',
@@ -246,7 +247,7 @@ describe('ldataReadFileAsync', () => {
     });
 
     it('returns null when the read rejects', async () => {
-        (readFile as jest.Mock).mockRejectedValue(new Error('ENOENT'));
+        (readFile as Mock).mockRejectedValue(new Error('ENOENT'));
 
         const result = await ldataReadFileAsync(
             './public/data/ldata-charts/',
@@ -258,7 +259,7 @@ describe('ldataReadFileAsync', () => {
     });
 
     it('encodes negative keys with n prefix in the read path', async () => {
-        (readFile as jest.Mock).mockResolvedValue('null');
+        (readFile as Mock).mockResolvedValue('null');
 
         await ldataReadFileAsync('./public/data/ldata-charts/', 'd', [-5, 10]);
 
@@ -269,7 +270,7 @@ describe('ldataReadFileAsync', () => {
     });
 
     it('does not invoke notifyWrite on reads', async () => {
-        (readFile as jest.Mock).mockResolvedValue('{}');
+        (readFile as Mock).mockResolvedValue('{}');
 
         await ldataReadFileAsync('./public/data/ldata-charts/', 'd', [1]);
 
