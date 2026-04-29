@@ -1,39 +1,31 @@
-// `vi.hoisted` lifts the factory above all imports so the same `vi.fn()`
-// instances are visible to both the `vi.mock('kafkajs', …)` factory below
-// and the test bodies. Without this, the mock and the assertions reference
-// different mock identities.
-const kafkaMocks = vi.hoisted(() => {
-    const connect = vi.fn();
-    const send = vi.fn();
-    const producerFactory = vi.fn(() => ({ connect, send }));
-    // Must be a regular `function` (not an arrow) — `new Kafka(…)` in
-    // kafka-notify.ts invokes this with `new`, which arrow functions don't
-    // support.
-    const KafkaCtor = vi.fn(function () {
-        return { producer: producerFactory };
-    });
-    return { connect, send, producerFactory, KafkaCtor };
+jest.mock('kafkajs', () => {
+    const connect = jest.fn();
+    const send = jest.fn();
+    const producerFactory = jest.fn(() => ({ connect, send }));
+    const KafkaCtor = jest.fn(() => ({ producer: producerFactory }));
+    return {
+        Kafka: KafkaCtor,
+        __mocks: { connect, send, producerFactory, KafkaCtor },
+    };
 });
 
-vi.mock('kafkajs', () => ({ Kafka: kafkaMocks.KafkaCtor }));
-
-import type { MockInstance } from 'vitest';
+const kafkaMocks = () => (jest.requireMock('kafkajs') as any).__mocks;
 
 const flush = () => new Promise<void>((resolve) => setImmediate(resolve));
 
 describe('notifyWrite', () => {
-    let logSpy: MockInstance;
+    let logSpy: jest.SpyInstance;
 
     beforeEach(() => {
-        vi.resetModules();
-        const { connect, send, producerFactory, KafkaCtor } = kafkaMocks;
+        jest.resetModules();
+        const { connect, send, producerFactory, KafkaCtor } = kafkaMocks();
         connect.mockReset();
         send.mockReset();
         producerFactory.mockClear();
         KafkaCtor.mockClear();
         connect.mockResolvedValue(undefined);
         send.mockResolvedValue(undefined);
-        logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+        logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
     });
 
     afterEach(() => {
@@ -41,8 +33,8 @@ describe('notifyWrite', () => {
     });
 
     it('sends an LdataUpdateLogEntry to ldata-update-log with :strm suffix', async () => {
-        const { notifyWrite } = await import('./kafka-notify');
-        const { send } = kafkaMocks;
+        const { notifyWrite } = require('./kafka-notify');
+        const { send } = kafkaMocks();
 
         notifyWrite(
             'ldata-charts',
@@ -68,8 +60,8 @@ describe('notifyWrite', () => {
     });
 
     it('produces a timestamp in seconds (not milliseconds)', async () => {
-        const { notifyWrite } = await import('./kafka-notify');
-        const { send } = kafkaMocks;
+        const { notifyWrite } = require('./kafka-notify');
+        const { send } = kafkaMocks();
 
         const before = Math.floor(Date.now() / 1000);
         notifyWrite('ldata-charts', 'd', [1]);
@@ -82,8 +74,8 @@ describe('notifyWrite', () => {
     });
 
     it('encodes negative keys with n prefix in affected_fields', async () => {
-        const { notifyWrite } = await import('./kafka-notify');
-        const { send } = kafkaMocks;
+        const { notifyWrite } = require('./kafka-notify');
+        const { send } = kafkaMocks();
 
         notifyWrite('ldata-irrpy', 'telemetrySubsessions', [-42]);
         await flush();
@@ -94,8 +86,8 @@ describe('notifyWrite', () => {
     });
 
     it('connects once and reuses the producer across calls', async () => {
-        const { notifyWrite } = await import('./kafka-notify');
-        const { connect, send, KafkaCtor } = kafkaMocks;
+        const { notifyWrite } = require('./kafka-notify');
+        const { connect, send, KafkaCtor } = kafkaMocks();
 
         notifyWrite('ldata-charts', 'a', [1]);
         notifyWrite('ldata-charts', 'b', [2]);
@@ -108,10 +100,10 @@ describe('notifyWrite', () => {
     });
 
     it('silently disables when Kafka connect fails and logs once', async () => {
-        const { connect, send } = kafkaMocks;
+        const { connect, send } = kafkaMocks();
         connect.mockRejectedValueOnce(new Error('ECONNREFUSED'));
 
-        const { notifyWrite } = await import('./kafka-notify');
+        const { notifyWrite } = require('./kafka-notify');
         notifyWrite('ldata-charts', 'a', [1]);
         await flush();
         notifyWrite('ldata-charts', 'b', [2]);
@@ -127,10 +119,10 @@ describe('notifyWrite', () => {
     });
 
     it('does not throw when producer.send() rejects', async () => {
-        const { send } = kafkaMocks;
+        const { send } = kafkaMocks();
         send.mockRejectedValueOnce(new Error('broker down'));
 
-        const { notifyWrite } = await import('./kafka-notify');
+        const { notifyWrite } = require('./kafka-notify');
         expect(() => notifyWrite('ldata-charts', 'a', [1])).not.toThrow();
         await flush();
 
@@ -143,10 +135,10 @@ describe('notifyWrite', () => {
     });
 
     it('stringifies non-Error rejection values in the failure log', async () => {
-        const { send } = kafkaMocks;
+        const { send } = kafkaMocks();
         send.mockRejectedValueOnce('raw-string-error');
 
-        const { notifyWrite } = await import('./kafka-notify');
+        const { notifyWrite } = require('./kafka-notify');
         notifyWrite('ldata-charts', 'a', [1]);
         await flush();
 

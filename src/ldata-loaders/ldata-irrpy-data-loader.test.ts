@@ -1,7 +1,6 @@
-import type { Mock } from 'vitest';
-vi.mock('fs');
-vi.mock('fs/promises');
-vi.mock('./kafka-notify', () => ({ notifyWrite: vi.fn() }));
+jest.mock('fs');
+jest.mock('fs/promises');
+jest.mock('./kafka-notify', () => ({ notifyWrite: jest.fn() }));
 
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { readFile, writeFile, mkdir, stat } from 'fs/promises';
@@ -18,16 +17,16 @@ import { notifyWrite } from './kafka-notify';
 const MNT = './public/data/ldata-irrpy/';
 
 beforeEach(() => {
-    vi.clearAllMocks();
-    (existsSync as Mock).mockReturnValue(true);
-    (stat as Mock).mockResolvedValue({});
-    (writeFile as Mock).mockResolvedValue(undefined);
-    (mkdir as Mock).mockResolvedValue(undefined);
+    jest.clearAllMocks();
+    (existsSync as jest.Mock).mockReturnValue(true);
+    (stat as jest.Mock).mockResolvedValue({});
+    (writeFile as jest.Mock).mockResolvedValue(undefined);
+    (mkdir as jest.Mock).mockResolvedValue(undefined);
 });
 
 describe('getTelemetrySubsessions', () => {
     it('reads and parses the per-league file', () => {
-        (readFileSync as Mock).mockReturnValue('[1, 2, 3]');
+        (readFileSync as jest.Mock).mockReturnValue('[1, 2, 3]');
         expect(getTelemetrySubsessions(42)).toEqual([1, 2, 3]);
         expect(readFileSync).toHaveBeenCalledWith(
             `${MNT}telemetrySubsessions/42.json`,
@@ -36,7 +35,7 @@ describe('getTelemetrySubsessions', () => {
     });
 
     it('returns null on read failure', () => {
-        (readFileSync as Mock).mockImplementation(() => {
+        (readFileSync as jest.Mock).mockImplementation(() => {
             throw new Error('ENOENT');
         });
         expect(getTelemetrySubsessions(42)).toBeNull();
@@ -77,14 +76,14 @@ describe('getTelemetryScan', () => {
             .replace('"sentinel-d"', '-inf')
             .replace('"sentinel-e"', '--1');
 
-        (readFileSync as Mock).mockReturnValue(payload);
+        (readFileSync as jest.Mock).mockReturnValue(payload);
 
         const result = getTelemetryScan(42, 999);
         expect(result).toEqual({ a: -1, b: -1, c: -1, d: -1, e: -1 });
     });
 
     it('reads from the nested league/subsession path', () => {
-        (readFileSync as Mock).mockReturnValue('{}');
+        (readFileSync as jest.Mock).mockReturnValue('{}');
         getTelemetryScan(42, 999);
         expect(readFileSync).toHaveBeenCalledWith(
             `${MNT}telemetryScans/42/999.json`,
@@ -93,7 +92,7 @@ describe('getTelemetryScan', () => {
     });
 
     it('returns null on read failure', () => {
-        (readFileSync as Mock).mockImplementation(() => {
+        (readFileSync as jest.Mock).mockImplementation(() => {
             throw new Error('ENOENT');
         });
         expect(getTelemetryScan(42, 999)).toBeNull();
@@ -102,7 +101,7 @@ describe('getTelemetryScan', () => {
 
 describe('getTelemetrySubsessionsAsync', () => {
     it('reads and parses the per-league file', async () => {
-        (readFile as Mock).mockResolvedValue('[1, 2, 3]');
+        (readFile as jest.Mock).mockResolvedValue('[1, 2, 3]');
         await expect(getTelemetrySubsessionsAsync(42)).resolves.toEqual([
             1, 2, 3,
         ]);
@@ -113,7 +112,7 @@ describe('getTelemetrySubsessionsAsync', () => {
     });
 
     it('returns null on read failure', async () => {
-        (readFile as Mock).mockRejectedValue(new Error('ENOENT'));
+        (readFile as jest.Mock).mockRejectedValue(new Error('ENOENT'));
         await expect(getTelemetrySubsessionsAsync(42)).resolves.toBeNull();
     });
 });
@@ -152,14 +151,14 @@ describe('getTelemetryScanAsync', () => {
             .replace('"sentinel-d"', '-inf')
             .replace('"sentinel-e"', '--1');
 
-        (readFile as Mock).mockResolvedValue(payload);
+        (readFile as jest.Mock).mockResolvedValue(payload);
 
         const result = await getTelemetryScanAsync(42, 999);
         expect(result).toEqual({ a: -1, b: -1, c: -1, d: -1, e: -1 });
     });
 
     it('reads from the nested league/subsession path', async () => {
-        (readFile as Mock).mockResolvedValue('{}');
+        (readFile as jest.Mock).mockResolvedValue('{}');
         await getTelemetryScanAsync(42, 999);
         expect(readFile).toHaveBeenCalledWith(
             `${MNT}telemetryScans/42/999.json`,
@@ -168,7 +167,7 @@ describe('getTelemetryScanAsync', () => {
     });
 
     it('returns null on read failure', async () => {
-        (readFile as Mock).mockRejectedValue(new Error('ENOENT'));
+        (readFile as jest.Mock).mockRejectedValue(new Error('ENOENT'));
         await expect(getTelemetryScanAsync(42, 999)).resolves.toBeNull();
     });
 });

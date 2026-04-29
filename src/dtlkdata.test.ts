@@ -1,35 +1,34 @@
-import type { Mock, MockInstance } from 'vitest';
-vi.mock('./ldata-loaders/iracing-scraped-data-loader', () => ({
-    getBlockedSeasonsAsync: vi.fn(),
-    getLapChartDataAsync: vi.fn(),
-    getLeagueRosterAsync: vi.fn(),
-    getLeagueSeasonsAsync: vi.fn(),
-    getLeagueSeasonSessionsAsync: vi.fn(),
-    getMembersDataAsync: vi.fn(),
+jest.mock('./ldata-loaders/iracing-scraped-data-loader', () => ({
+    getBlockedSeasonsAsync: jest.fn(),
+    getLapChartDataAsync: jest.fn(),
+    getLeagueRosterAsync: jest.fn(),
+    getLeagueSeasonsAsync: jest.fn(),
+    getLeagueSeasonSessionsAsync: jest.fn(),
+    getMembersDataAsync: jest.fn(),
 }));
-vi.mock('./ldata-loaders/iracing-derived-data-loader', () => ({
-    getDriverSessionResultsAsync: vi.fn(),
-    getLeagueDriverStatsAsync: vi.fn(),
-    getLeagueSubsessionIndexAsync: vi.fn(),
-    getSimSessionResultsAsync: vi.fn(),
-    getSingleMemberDataAsync: vi.fn(),
-    getTrackInfoDirectoryAsync: vi.fn(),
-    getTrackResultsAsync: vi.fn(),
+jest.mock('./ldata-loaders/iracing-derived-data-loader', () => ({
+    getDriverSessionResultsAsync: jest.fn(),
+    getLeagueDriverStatsAsync: jest.fn(),
+    getLeagueSubsessionIndexAsync: jest.fn(),
+    getSimSessionResultsAsync: jest.fn(),
+    getSingleMemberDataAsync: jest.fn(),
+    getTrackInfoDirectoryAsync: jest.fn(),
+    getTrackResultsAsync: jest.fn(),
 }));
-vi.mock('./ldata-loaders/ldata-stward-data-loader', () => ({
-    getStewardRulingsAsync: vi.fn(),
+jest.mock('./ldata-loaders/ldata-stward-data-loader', () => ({
+    getStewardRulingsAsync: jest.fn(),
 }));
-vi.mock('./ldata-loaders/ldata-chart-data-loader', () => ({
-    getCumulativeDeltaChartDataAsync: vi.fn(),
-    getPacePercentChartDataAsync: vi.fn(),
-    getStartFinishChartDataAsync: vi.fn(),
+jest.mock('./ldata-loaders/ldata-chart-data-loader', () => ({
+    getCumulativeDeltaChartDataAsync: jest.fn(),
+    getPacePercentChartDataAsync: jest.fn(),
+    getStartFinishChartDataAsync: jest.fn(),
 }));
-vi.mock('./ldata-loaders/ldata-gentxt-data-loader', () => ({
-    getDotdProfileAsync: vi.fn(),
-    getSimsessionSummaryAsync: vi.fn(),
+jest.mock('./ldata-loaders/ldata-gentxt-data-loader', () => ({
+    getDotdProfileAsync: jest.fn(),
+    getSimsessionSummaryAsync: jest.fn(),
 }));
-vi.mock('./ldata-loaders/ldata-irrpy-data-loader', () => ({
-    getTelemetrySubsessionsAsync: vi.fn(),
+jest.mock('./ldata-loaders/ldata-irrpy-data-loader', () => ({
+    getTelemetrySubsessionsAsync: jest.fn(),
 }));
 
 import { getDocument, getFromLoader, getFromUrl, UNHANDLED } from './dtlkdata';
@@ -46,11 +45,11 @@ import {
 } from './ldata-loaders/iracing-derived-data-loader';
 import { getStewardRulingsAsync } from './ldata-loaders/ldata-stward-data-loader';
 
-const mockFetch = vi.fn();
+const mockFetch = jest.fn();
 global.fetch = mockFetch as any;
 
 beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
     mockFetch.mockReset();
 });
 
@@ -61,7 +60,7 @@ beforeEach(() => {
 describe('getFromLoader dispatch', () => {
     describe('ldata-irweb', () => {
         test('routes leagueSeasonSessions to getLeagueSeasonSessionsAsync', async () => {
-            (getLeagueSeasonSessionsAsync as Mock).mockResolvedValue({
+            (getLeagueSeasonSessionsAsync as jest.Mock).mockResolvedValue({
                 sessions: [],
             });
             const result = await getFromLoader({
@@ -78,7 +77,7 @@ describe('getFromLoader dispatch', () => {
         });
 
         test('routes leagueSeasons to getLeagueSeasonsAsync', async () => {
-            (getLeagueSeasonsAsync as Mock).mockResolvedValue({
+            (getLeagueSeasonsAsync as jest.Mock).mockResolvedValue({
                 seasons: [],
             });
             await getFromLoader({
@@ -90,7 +89,7 @@ describe('getFromLoader dispatch', () => {
         });
 
         test('routes membersData to getMembersDataAsync', async () => {
-            (getMembersDataAsync as Mock).mockResolvedValue({
+            (getMembersDataAsync as jest.Mock).mockResolvedValue({
                 members: [],
             });
             await getFromLoader({
@@ -103,7 +102,7 @@ describe('getFromLoader dispatch', () => {
         });
 
         test('routes blockedSeasons to getBlockedSeasonsAsync (no key args)', async () => {
-            (getBlockedSeasonsAsync as Mock).mockResolvedValue({
+            (getBlockedSeasonsAsync as jest.Mock).mockResolvedValue({
                 '6555_76693': true,
                 min_season_id: 60000,
             });
@@ -121,7 +120,7 @@ describe('getFromLoader dispatch', () => {
 
     describe('ldata-rsltsts', () => {
         test('routes leagueDriverStats to getLeagueDriverStatsAsync', async () => {
-            (getLeagueDriverStatsAsync as Mock).mockResolvedValue({});
+            (getLeagueDriverStatsAsync as jest.Mock).mockResolvedValue({});
             await getFromLoader({
                 namespace: 'ldata-rsltsts',
                 type: 'leagueDriverStats',
@@ -131,7 +130,7 @@ describe('getFromLoader dispatch', () => {
         });
 
         test('routes leagueSimsessionIndex to getLeagueSubsessionIndexAsync', async () => {
-            (getLeagueSubsessionIndexAsync as Mock).mockResolvedValue([]);
+            (getLeagueSubsessionIndexAsync as jest.Mock).mockResolvedValue([]);
             await getFromLoader({
                 namespace: 'ldata-rsltsts',
                 type: 'leagueSimsessionIndex',
@@ -141,7 +140,7 @@ describe('getFromLoader dispatch', () => {
         });
 
         test('routes singleMemberData to getSingleMemberDataAsync (custId key)', async () => {
-            (getSingleMemberDataAsync as Mock).mockResolvedValue({
+            (getSingleMemberDataAsync as jest.Mock).mockResolvedValue({
                 cust_id: 12345,
             });
             await getFromLoader({
@@ -153,7 +152,7 @@ describe('getFromLoader dispatch', () => {
         });
 
         test('singleMemberData also accepts the legacy `driver` alias', async () => {
-            (getSingleMemberDataAsync as Mock).mockResolvedValue({
+            (getSingleMemberDataAsync as jest.Mock).mockResolvedValue({
                 cust_id: 67890,
             });
             await getFromLoader({
@@ -167,7 +166,7 @@ describe('getFromLoader dispatch', () => {
 
     describe('ldata-stward', () => {
         test('routes rulings to getStewardRulingsAsync', async () => {
-            (getStewardRulingsAsync as Mock).mockResolvedValue([]);
+            (getStewardRulingsAsync as jest.Mock).mockResolvedValue([]);
             await getFromLoader({
                 namespace: 'ldata-stward',
                 type: 'rulings',
@@ -180,7 +179,7 @@ describe('getFromLoader dispatch', () => {
 
     describe('key coercion', () => {
         test('coerces string keys to numbers before calling loaders', async () => {
-            (getLeagueSeasonSessionsAsync as Mock).mockResolvedValue(null);
+            (getLeagueSeasonSessionsAsync as jest.Mock).mockResolvedValue(null);
             await getFromLoader({
                 namespace: 'ldata-irweb',
                 type: 'leagueSeasonSessions',
@@ -289,10 +288,10 @@ describe('getFromUrl', () => {
 // ---------------------------------------------------------------------------
 
 describe('getDocument shadow-mode', () => {
-    let warnSpy: MockInstance;
+    let warnSpy: jest.SpyInstance;
 
     beforeEach(() => {
-        warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     });
     afterEach(() => {
         warnSpy.mockRestore();
@@ -301,7 +300,7 @@ describe('getDocument shadow-mode', () => {
     test('returns the URL result when both sources agree', async () => {
         const payload = { sessions: [{ subsession_id: 1 }] };
         mockFetch.mockResolvedValueOnce({ json: async () => payload });
-        (getLeagueSeasonSessionsAsync as Mock).mockResolvedValue(payload);
+        (getLeagueSeasonSessionsAsync as jest.Mock).mockResolvedValue(payload);
 
         const result = await getDocument({
             namespace: 'ldata-irweb',
@@ -318,7 +317,7 @@ describe('getDocument shadow-mode', () => {
         mockFetch.mockResolvedValueOnce({
             json: async () => ({ sessions: [{ subsession_id: 1 }] }),
         });
-        (getLeagueSeasonSessionsAsync as Mock).mockResolvedValue({
+        (getLeagueSeasonSessionsAsync as jest.Mock).mockResolvedValue({
             sessions: [{ subsession_id: 2 }],
         });
 
@@ -343,7 +342,7 @@ describe('getDocument shadow-mode', () => {
         mockFetch.mockResolvedValueOnce({
             json: async () => ({ seasons: [] }),
         });
-        (getLeagueSeasonsAsync as Mock).mockResolvedValue(null);
+        (getLeagueSeasonsAsync as jest.Mock).mockResolvedValue(null);
 
         const result = await getDocument({
             namespace: 'ldata-irweb',
@@ -361,7 +360,7 @@ describe('getDocument shadow-mode', () => {
     test('returns the loader result when URL is null but loader has data', async () => {
         mockFetch.mockRejectedValueOnce(new Error('not found'));
         const loaderPayload = { seasons: [] };
-        (getLeagueSeasonsAsync as Mock).mockResolvedValue(loaderPayload);
+        (getLeagueSeasonsAsync as jest.Mock).mockResolvedValue(loaderPayload);
 
         const result = await getDocument({
             namespace: 'ldata-irweb',
@@ -379,7 +378,7 @@ describe('getDocument shadow-mode', () => {
 
     test('does not log when both sources return null', async () => {
         mockFetch.mockRejectedValueOnce(new Error('not found'));
-        (getLeagueSeasonsAsync as Mock).mockResolvedValue(null);
+        (getLeagueSeasonsAsync as jest.Mock).mockResolvedValue(null);
 
         const result = await getDocument({
             namespace: 'ldata-irweb',
@@ -394,7 +393,7 @@ describe('getDocument shadow-mode', () => {
     test('loader-side exceptions never affect what the caller receives', async () => {
         const payload = { seasons: [{ season_id: 1 }] };
         mockFetch.mockResolvedValueOnce({ json: async () => payload });
-        (getLeagueSeasonsAsync as Mock).mockRejectedValue(
+        (getLeagueSeasonsAsync as jest.Mock).mockRejectedValue(
             new Error('disk on fire')
         );
 
@@ -411,7 +410,7 @@ describe('getDocument shadow-mode', () => {
 
     test('runs URL and loader in parallel (both invoked)', async () => {
         mockFetch.mockResolvedValueOnce({ json: async () => null });
-        (getLeagueSeasonsAsync as Mock).mockResolvedValue(null);
+        (getLeagueSeasonsAsync as jest.Mock).mockResolvedValue(null);
 
         await getDocument({
             namespace: 'ldata-irweb',

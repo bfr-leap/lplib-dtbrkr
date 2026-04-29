@@ -1,7 +1,6 @@
-import type { Mock } from 'vitest';
-vi.mock('fs');
-vi.mock('fs/promises');
-vi.mock('./kafka-notify', () => ({ notifyWrite: vi.fn() }));
+jest.mock('fs');
+jest.mock('fs/promises');
+jest.mock('./kafka-notify', () => ({ notifyWrite: jest.fn() }));
 
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { readFile, writeFile, mkdir, stat } from 'fs/promises';
@@ -15,16 +14,16 @@ import {
 const MNT = './public/data/ldata-xftelem/';
 
 beforeEach(() => {
-    vi.clearAllMocks();
-    (existsSync as Mock).mockReturnValue(true);
-    (stat as Mock).mockResolvedValue({});
-    (writeFile as Mock).mockResolvedValue(undefined);
-    (mkdir as Mock).mockResolvedValue(undefined);
+    jest.clearAllMocks();
+    (existsSync as jest.Mock).mockReturnValue(true);
+    (stat as jest.Mock).mockResolvedValue({});
+    (writeFile as jest.Mock).mockResolvedValue(undefined);
+    (mkdir as jest.Mock).mockResolvedValue(undefined);
 });
 
 describe('getReconstructedTelemetry', () => {
     it('encodes negative simsession numbers with n prefix', () => {
-        (readFileSync as Mock).mockReturnValue('{}');
+        (readFileSync as jest.Mock).mockReturnValue('{}');
         getReconstructedTelemetry(1, 2, -3);
         expect(readFileSync).toHaveBeenCalledWith(
             `${MNT}reconstructedTelemetry/1/2/n3.json`,
@@ -33,12 +32,12 @@ describe('getReconstructedTelemetry', () => {
     });
 
     it('returns parsed content for existing files', () => {
-        (readFileSync as Mock).mockReturnValue('{"x":1}');
+        (readFileSync as jest.Mock).mockReturnValue('{"x":1}');
         expect(getReconstructedTelemetry(1, 2, 0)).toEqual({ x: 1 });
     });
 
     it('returns null on read failure', () => {
-        (readFileSync as Mock).mockImplementation(() => {
+        (readFileSync as jest.Mock).mockImplementation(() => {
             throw new Error('ENOENT');
         });
         expect(getReconstructedTelemetry(1, 2, 0)).toBeNull();
@@ -57,7 +56,7 @@ describe('writeReconstructedTelemetry', () => {
 
 describe('getReconstructedTelemetryAsync', () => {
     it('encodes negative simsession numbers with n prefix', async () => {
-        (readFile as Mock).mockResolvedValue('{}');
+        (readFile as jest.Mock).mockResolvedValue('{}');
         await getReconstructedTelemetryAsync(1, 2, -3);
         expect(readFile).toHaveBeenCalledWith(
             `${MNT}reconstructedTelemetry/1/2/n3.json`,
@@ -66,14 +65,14 @@ describe('getReconstructedTelemetryAsync', () => {
     });
 
     it('returns parsed content for existing files', async () => {
-        (readFile as Mock).mockResolvedValue('{"x":1}');
+        (readFile as jest.Mock).mockResolvedValue('{"x":1}');
         await expect(getReconstructedTelemetryAsync(1, 2, 0)).resolves.toEqual({
             x: 1,
         });
     });
 
     it('returns null on read failure', async () => {
-        (readFile as Mock).mockRejectedValue(new Error('ENOENT'));
+        (readFile as jest.Mock).mockRejectedValue(new Error('ENOENT'));
         await expect(
             getReconstructedTelemetryAsync(1, 2, 0)
         ).resolves.toBeNull();

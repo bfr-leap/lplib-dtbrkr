@@ -1,6 +1,5 @@
-import type { Mock } from 'vitest';
-vi.mock('./dtlkdata', () => ({
-    getDocument: vi.fn(),
+jest.mock('./dtlkdata', () => ({
+    getDocument: jest.fn(),
 }));
 
 import {
@@ -82,12 +81,12 @@ const sampleRulings = [
 ];
 
 function mockStwardData(payload: any) {
-    (getDataLakeDocument as Mock).mockResolvedValueOnce(payload);
+    (getDataLakeDocument as jest.Mock).mockResolvedValueOnce(payload);
 }
 
 describe('stward - data lake accessors', () => {
     beforeEach(() => {
-        (getDataLakeDocument as Mock).mockReset();
+        (getDataLakeDocument as jest.Mock).mockReset();
     });
 
     describe('getAllRulings', () => {
@@ -281,7 +280,7 @@ describe('stward - stewardHandler', () => {
     const testLeague = '828282';
 
     beforeEach(() => {
-        (getDataLakeDocument as Mock).mockReset();
+        (getDataLakeDocument as jest.Mock).mockReset();
     });
 
     afterEach(async () => {
