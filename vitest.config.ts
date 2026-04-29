@@ -5,7 +5,7 @@ export default defineConfig({
         globals: true,
         environment: 'node',
         include: ['src/**/*.test.ts'],
-        globalSetup: ['./test/setup.ts'],
-        setupFiles: ['./test/dotenv.setup.ts'],
+        globalSetup: ['./src/test-setup/global-setup.ts'],
+        setupFiles: ['./src/test-setup/dotenv-setup.ts'],
     },
 });

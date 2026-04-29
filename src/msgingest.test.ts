@@ -63,11 +63,10 @@ describe('msgingest', () => {
         });
 
         afterAll(async () => {
-            // Re-seed the test data that other tests may depend on. The
-            // path is built at runtime so tsc doesn't try to pull the
-            // seed module under rootDir.
-            const seedPath = '../test/seed/seed-tracktalk-raw-message-ingest';
-            const { seedTracktalkRawMessageIngest } = await import(seedPath);
+            // Re-seed the test data that other tests may depend on.
+            const { seedTracktalkRawMessageIngest } = await import(
+                './test-setup/seed/seed-tracktalk-raw-message-ingest'
+            );
             await seedTracktalkRawMessageIngest();
         });
     });
