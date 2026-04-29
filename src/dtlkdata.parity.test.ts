@@ -60,10 +60,25 @@ const CASES: Array<{
         },
     },
     {
+        name: 'ldata-irweb/blockedSeasons',
+        query: {
+            namespace: 'ldata-irweb',
+            type: 'blockedSeasons',
+        },
+    },
+    {
         name: 'ldata-rsltsts/leagueDriverStats',
         query: {
             namespace: 'ldata-rsltsts',
             type: 'leagueDriverStats',
+            league: 4534,
+        },
+    },
+    {
+        name: 'ldata-rsltsts/leagueSimsessionIndex',
+        query: {
+            namespace: 'ldata-rsltsts',
+            type: 'leagueSimsessionIndex',
             league: 4534,
         },
     },

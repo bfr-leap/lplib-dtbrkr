@@ -35,6 +35,8 @@ export { getMostRecentActiveSeason, getAllSeasonIdsForLeague } from './seasons';
 // ---------------------------------------------------------------------------
 
 export {
+    getBlockedSeasons,
+    getBlockedSeasonsAsync,
     getLeagueDirectory,
     getLeagueSeasons,
     getLeagueSeasonSessions,
@@ -49,12 +51,12 @@ export {
 
 export {
     getSimSessionResults,
-    getLeaguSubsessionIndex,
+    getLeagueSubsessionIndex,
     getSimsessionDriverTelemetry,
     getProcessedTelemetryManifest,
     saveProcessedTelemetryManifest,
     getSimSessionResultsAsync,
-    getLeaguSubsessionIndexAsync,
+    getLeagueSubsessionIndexAsync,
     getSimsessionDriverTelemetryAsync,
     getProcessedTelemetryManifestAsync,
     saveProcessedTelemetryManifestAsync,

@@ -12,6 +12,7 @@ import { readFileSync } from 'fs';
 import { readFile } from 'fs/promises';
 
 import type {
+    BlockedSeasons,
     LeagueDirectory,
     LeagueSeasons,
     LeagueSeasonSessions,
@@ -116,4 +117,34 @@ export function getMembersDataAsync(
         leagueId,
         seasonId,
     ]);
+}
+
+// `blockedSeasons.json` is a single keyless file that lives directly under
+// the namespace root, so it doesn't fit the dataset/keys path layout that
+// `ldataReadFile(...)` builds. Read it directly and return null on missing
+// file or parse error to honor the dispatcher's null-on-failure contract.
+export function getBlockedSeasons(): BlockedSeasons | null {
+    try {
+        return JSON.parse(
+            readFileSync(`${MNT_PT}blockedSeasons.json`, {
+                encoding: 'utf8',
+                flag: 'r',
+            })
+        ) as BlockedSeasons;
+    } catch {
+        return null;
+    }
+}
+
+export async function getBlockedSeasonsAsync(): Promise<BlockedSeasons | null> {
+    try {
+        return JSON.parse(
+            await readFile(`${MNT_PT}blockedSeasons.json`, {
+                encoding: 'utf8',
+                flag: 'r',
+            })
+        ) as BlockedSeasons;
+    } catch {
+        return null;
+    }
 }
