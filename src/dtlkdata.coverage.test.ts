@@ -3,54 +3,45 @@
 //
 // Iterates every entry in `DATA_LAKE_ENDPOINTS` and asserts that the
 // dispatcher in `src/dtlkdata.ts` either routes it to a loader (returning a
-// non-null sentinel) or has it explicitly marked `unshadowed` with a reason.
+// non-UNHANDLED sentinel) or has it explicitly marked `unshadowed` with a
+// reason. The UNHANDLED sentinel is the runtime backstop — if any catalogued
+// endpoint produces UNHANDLED, the static manifest has drifted from the
+// dispatcher switch.
 //
-// Each loader module is mocked with a Proxy whose `get` returns an async
-// function resolving to a SENTINEL value, so we don't need to maintain a
-// per-export mock list — newly added loader functions are auto-stubbed.
+// Mocking strategy: rather than mocking each loader module by name (which
+// drifts every time a new loader file is added to the dispatcher), we mock
+// the file-system primitives the loaders share — `./ldata-loaders/fsutil`
+// for the keyed dataset reads, and `fs/promises` for the few loaders that
+// bypass fsutil (`getBlockedSeasonsAsync`, the steward rulings walker).
+// Both are stubbed to return the same sentinel object, so any wired loader
+// resolves to a non-null result and the test only fails when the dispatcher
+// is missing a case for a catalogued (namespace, type) pair.
 // =============================================================================
 
-// Auto-stub every export of every loader module the dispatcher imports.
-// Returning a function for any property name (including ts-jest's
-// `__esModule` interop probe) makes `import { fooAsync } from 'mod'`
-// resolve to `() => Promise.resolve(SENTINEL_RESULT)`. The factory has
-// to be inlined: Jest hoists `jest.mock(...)` calls above all source-file
-// declarations, so the factory cannot reference outer module bindings.
-jest.mock('./ldata-loaders/iracing-scraped-data-loader', () =>
-    new Proxy(
-        {},
-        {
-            get: (_t, prop) => {
-                if (prop === '__esModule') return true;
-                return async () => ({ __coverage_sentinel: true });
-            },
-        }
-    )
-);
-jest.mock('./ldata-loaders/iracing-derived-data-loader', () =>
-    new Proxy(
-        {},
-        {
-            get: (_t, prop) => {
-                if (prop === '__esModule') return true;
-                return async () => ({ __coverage_sentinel: true });
-            },
-        }
-    )
-);
-jest.mock('./ldata-loaders/ldata-stward-data-loader', () =>
-    new Proxy(
-        {},
-        {
-            get: (_t, prop) => {
-                if (prop === '__esModule') return true;
-                return async () => ({ __coverage_sentinel: true });
-            },
-        }
-    )
-);
+const SENTINEL = { __coverage_sentinel: true };
 
-import { getFromLoader } from './dtlkdata';
+vi.mock('./ldata-loaders/fsutil', () => ({
+    ldataReadFile: vi.fn(() => SENTINEL),
+    ldataReadFileAsync: vi.fn(async () => SENTINEL),
+    ldataWriteFile: vi.fn(),
+    ldataWriteFileAsync: vi.fn(async () => undefined),
+}));
+
+vi.mock('./ldata-loaders/kafka-notify', () => ({
+    notifyWrite: vi.fn(),
+}));
+
+vi.mock('fs/promises', async () => {
+    const actual = await vi.importActual<typeof import('fs/promises')>(
+        'fs/promises'
+    );
+    return {
+        ...actual,
+        readFile: vi.fn(async () => JSON.stringify(SENTINEL)),
+    };
+});
+
+import { getFromLoader, UNHANDLED } from './dtlkdata';
 import {
     DATA_LAKE_ENDPOINTS,
     type DataLakeEndpoint,
@@ -74,6 +65,19 @@ describe('data-lake dispatcher coverage', () => {
         expect(duplicates).toEqual([]);
     });
 
+    test('every manifest entry produces a non-UNHANDLED result — the runtime backstop must agree with the static manifest', async () => {
+        const unhandled: string[] = [];
+        for (const entry of DATA_LAKE_ENDPOINTS) {
+            const result = await getFromLoader({
+                namespace: entry.namespace,
+                type: entry.type,
+                ...entry.exampleQuery,
+            });
+            if (result === UNHANDLED) unhandled.push(label(entry));
+        }
+        expect(unhandled).toEqual([]);
+    });
+
     describe.each(DATA_LAKE_ENDPOINTS.map((e) => [label(e), e] as const))(
         '%s',
         (_name, entry) => {
@@ -87,6 +91,9 @@ describe('data-lake dispatcher coverage', () => {
                         type: entry.type,
                         ...entry.exampleQuery,
                     });
+
+                    // No catalogued endpoint may fall through the switch.
+                    expect(result).not.toBe(UNHANDLED);
 
                     if (entry.unshadowed) {
                         expect(result).toBeNull();

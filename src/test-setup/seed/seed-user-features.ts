@@ -1,5 +1,5 @@
-import { getDb, sql, executeInsert } from '../../src/db';
-import { USER_FEATURES } from '../../src/static-user-features';
+import { getDb, sql, executeInsert } from '../../db';
+import { USER_FEATURES } from '../../static-user-features';
 
 export async function seedUserFeatures() {
     console.log('seedUserFeatures() start');

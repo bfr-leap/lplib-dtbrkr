@@ -1,6 +1,7 @@
 import { isDeepStrictEqual } from 'util';
 import {
     getBlockedSeasonsAsync,
+    getLapChartDataAsync,
     getLeagueSeasonsAsync,
     getLeagueSeasonSessionsAsync,
     getMembersDataAsync,
@@ -8,11 +9,26 @@ import {
 import {
     getLeagueDriverStatsAsync,
     getLeagueSubsessionIndexAsync,
+    getSimSessionResultsAsync,
     getSingleMemberDataAsync,
 } from './ldata-loaders/iracing-derived-data-loader';
 import { getStewardRulingsAsync } from './ldata-loaders/ldata-stward-data-loader';
+import { getSimsessionSummaryAsync } from './ldata-loaders/ldata-gentxt-data-loader';
+import { getTelemetrySubsessionsAsync } from './ldata-loaders/ldata-irrpy-data-loader';
+import {
+    getCumulativeDeltaChartDataAsync,
+    getStartFinishChartDataAsync,
+} from './ldata-loaders/ldata-chart-data-loader';
 
 type Query = { [name: string]: string | number };
+
+// Sentinel returned by getFromLoader when no switch case matched the
+// (namespace, type) pair. Distinguishable from `null` (which the loader
+// itself returns when an on-disk read fails). getDocument uses this to log
+// a separate UNHANDLED warning so an uncatalogued endpoint can never recur
+// invisibly, even if the static manifest drifts.
+export const UNHANDLED: unique symbol = Symbol('unhandled-namespace');
+export type Unhandled = typeof UNHANDLED;
 
 function num(v: string | number | undefined): number | null {
     if (v === undefined || v === null || v === '') return null;
@@ -66,9 +82,13 @@ export async function getFromUrl(query: Query): Promise<any> {
 // Loader-backed dispatch — routes (namespace, type) to the typed loader for
 // that dataset. Exported for tests and the parity script; not re-exported
 // from src/index.ts (the public surface is `getDocument` only).
+//
+// Returns the loader's result on a matched case (which may be null if the
+// underlying read failed), or UNHANDLED if no case matched. Callers must
+// distinguish these — see getDocument for the runtime backstop.
 // ---------------------------------------------------------------------------
 
-export async function getFromLoader(query: Query): Promise<any> {
+export async function getFromLoader(query: Query): Promise<any | Unhandled> {
     const ns = String(query.namespace ?? '');
     const type = String(query.type ?? '');
 
@@ -93,6 +113,12 @@ export async function getFromLoader(query: Query): Promise<any> {
         case 'ldata-irweb/blockedSeasons': {
             return await getBlockedSeasonsAsync();
         }
+        case 'ldata-irweb/lapChartData': {
+            const subsession = num(query.subsession);
+            const simsession = num(query.simsession);
+            if (subsession === null || simsession === null) return null;
+            return await getLapChartDataAsync(subsession, simsession);
+        }
         case 'ldata-rsltsts/leagueDriverStats': {
             const league = num(query.league);
             if (league === null) return null;
@@ -108,15 +134,64 @@ export async function getFromLoader(query: Query): Promise<any> {
             if (driver === null) return null;
             return await getSingleMemberDataAsync(driver);
         }
+        case 'ldata-rsltsts/simSessionResults': {
+            const subsession = num(query.subsession);
+            const simsession = num(query.simsession);
+            if (subsession === null || simsession === null) return null;
+            return await getSimSessionResultsAsync(subsession, simsession);
+        }
         case 'ldata-stward/rulings': {
             const league = num(query.league);
             const season = num(query.season);
             if (league === null || season === null) return null;
             return await getStewardRulingsAsync(league, season);
         }
+        case 'ldata-gentxt/simsessionSummary': {
+            const subsession = num(query.subsession);
+            const simsession = num(query.simsession);
+            if (subsession === null || simsession === null) return null;
+            return await getSimsessionSummaryAsync(subsession, simsession);
+        }
+        case 'ldata-irrpy/telemetrySubsessions': {
+            const league = num(query.league);
+            if (league === null) return null;
+            return await getTelemetrySubsessionsAsync(league);
+        }
+        case 'ldata-charts/startFinishChartData': {
+            const league = num(query.league);
+            const subsession = num(query.subsession);
+            const simsession = num(query.simsession);
+            if (
+                league === null ||
+                subsession === null ||
+                simsession === null
+            )
+                return null;
+            return await getStartFinishChartDataAsync(
+                league,
+                subsession,
+                simsession
+            );
+        }
+        case 'ldata-charts/cumulativeDeltaChartData': {
+            const league = num(query.league);
+            const subsession = num(query.subsession);
+            const simsession = num(query.simsession);
+            if (
+                league === null ||
+                subsession === null ||
+                simsession === null
+            )
+                return null;
+            return await getCumulativeDeltaChartDataAsync(
+                league,
+                subsession,
+                simsession
+            );
+        }
     }
 
-    return null;
+    return UNHANDLED;
 }
 
 // ---------------------------------------------------------------------------
@@ -128,13 +203,17 @@ export async function getFromLoader(query: Query): Promise<any> {
 // path must never affect what the caller receives.
 // ---------------------------------------------------------------------------
 
-function logDivergence(query: Query, urlData: any, loaderData: any): void {
-    const ns = String(query.namespace ?? '');
-    const type = String(query.type ?? '');
-    const keys = Object.entries(query)
+function queryKeys(query: Query): string {
+    return Object.entries(query)
         .filter(([k]) => k !== 'namespace' && k !== 'type')
         .map(([k, v]) => `${k}=${v}`)
         .join(' ');
+}
+
+function logDivergence(query: Query, urlData: any, loaderData: any): void {
+    const ns = String(query.namespace ?? '');
+    const type = String(query.type ?? '');
+    const keys = queryKeys(query);
 
     let detail: string;
     if (urlData === null && loaderData !== null) {
@@ -153,13 +232,20 @@ export async function getDocument(query: Query): Promise<any> {
     const type = String(query.type ?? '');
     console.log(`:: dataLake: ${ns}/${type}`);
 
-    const [urlData, loaderData] = await Promise.all([
+    const [urlData, loaderResult] = await Promise.all([
         getFromUrl(query),
         getFromLoader(query).catch(() => null),
     ]);
 
-    if (!isDeepStrictEqual(urlData, loaderData)) {
-        logDivergence(query, urlData, loaderData);
+    if (loaderResult === UNHANDLED) {
+        // Distinct signal from "loader returned null" — this means the
+        // (namespace, type) pair has no dispatcher case at all. The static
+        // manifest may be missing it, or the consumer is querying something
+        // we never catalogued. Either way, ops needs to know.
+        const keys = queryKeys(query);
+        console.warn(`:: dataLake UNHANDLED [${ns}/${type}] ${keys}`);
+    } else if (!isDeepStrictEqual(urlData, loaderResult)) {
+        logDivergence(query, urlData, loaderResult);
     }
 
     return urlData;

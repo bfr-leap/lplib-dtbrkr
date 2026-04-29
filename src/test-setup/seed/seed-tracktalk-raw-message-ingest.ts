@@ -1,5 +1,5 @@
-import { deleteAllRawMessageIngest } from '../../src/msgingest';
-import { sql } from '../../src/db';
+import { deleteAllRawMessageIngest } from '../../msgingest';
+import { sql } from '../../db';
 
 export async function seedTracktalkRawMessageIngest() {
     console.log('seedTracktalkRawMessageIngest() start');

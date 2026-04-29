@@ -1,5 +1,5 @@
 // Generated with CLI
-import { getDb, sql } from '../../src/db';
+import { getDb, sql } from '../../db';
 
 let tracks: any = {
     '18': {

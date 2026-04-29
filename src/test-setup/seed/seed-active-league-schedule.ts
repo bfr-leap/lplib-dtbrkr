@@ -1,5 +1,5 @@
-import { getDb, sql, executeInsert } from '../../src/db';
-import { ACTIVE_LEAGUE_SCHEDULE } from '../../src/lib-usrcfg/static-active-league-schedule';
+import { getDb, sql, executeInsert } from '../../db';
+import { ACTIVE_LEAGUE_SCHEDULE } from '../../lib-usrcfg/static-active-league-schedule';
 
 let jsonInput = ACTIVE_LEAGUE_SCHEDULE;
 

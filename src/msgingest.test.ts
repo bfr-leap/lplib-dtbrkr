@@ -63,8 +63,10 @@ describe('msgingest', () => {
         });
 
         afterAll(async () => {
-            // Re-seed the test data that other tests may depend on
-            const { seedTracktalkRawMessageIngest } = require('../test/seed/seed-tracktalk-raw-message-ingest');
+            // Re-seed the test data that other tests may depend on.
+            const { seedTracktalkRawMessageIngest } = await import(
+                './test-setup/seed/seed-tracktalk-raw-message-ingest'
+            );
             await seedTracktalkRawMessageIngest();
         });
     });

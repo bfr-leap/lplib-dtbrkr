@@ -1,6 +1,7 @@
-jest.mock('fs');
-jest.mock('fs/promises');
-jest.mock('./kafka-notify', () => ({ notifyWrite: jest.fn() }));
+import type { Mock } from 'vitest';
+vi.mock('fs');
+vi.mock('fs/promises');
+vi.mock('./kafka-notify', () => ({ notifyWrite: vi.fn() }));
 
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'fs';
 import { readFile, writeFile, readdir, stat, mkdir } from 'fs/promises';
@@ -57,21 +58,21 @@ function ruling(overrides: Record<string, any> = {}) {
 }
 
 beforeEach(() => {
-    jest.clearAllMocks();
-    (existsSync as jest.Mock).mockReturnValue(true);
-    (stat as jest.Mock).mockResolvedValue({});
-    (writeFile as jest.Mock).mockResolvedValue(undefined);
-    (mkdir as jest.Mock).mockResolvedValue(undefined);
+    vi.clearAllMocks();
+    (existsSync as Mock).mockReturnValue(true);
+    (stat as Mock).mockResolvedValue({});
+    (writeFile as Mock).mockResolvedValue(undefined);
+    (mkdir as Mock).mockResolvedValue(undefined);
 });
 
 describe('getStewardRulings', () => {
     it('reads and parses an existing (leagueId, seasonId) file', () => {
-        (readFileSync as jest.Mock).mockReturnValue(JSON.stringify([ruling()]));
+        (readFileSync as Mock).mockReturnValue(JSON.stringify([ruling()]));
         expect(getStewardRulings(42, 7)).toHaveLength(1);
     });
 
     it('returns an empty array when no file exists', () => {
-        (readFileSync as jest.Mock).mockImplementation(() => {
+        (readFileSync as Mock).mockImplementation(() => {
             throw new Error('ENOENT');
         });
         expect(getStewardRulings(42, 7)).toEqual([]);
@@ -96,12 +97,12 @@ describe('saveStewardRulings', () => {
 
 describe('getAllStewardRulings', () => {
     it('returns [] when the root directory does not exist', () => {
-        (existsSync as jest.Mock).mockReturnValue(false);
+        (existsSync as Mock).mockReturnValue(false);
         expect(getAllStewardRulings()).toEqual([]);
     });
 
     it('walks leagues and seasons, skipping bad segments', () => {
-        (readdirSync as jest.Mock).mockImplementation((path: string) => {
+        (readdirSync as Mock).mockImplementation((path: string) => {
             if (path === ROOT) {
                 return [
                     dir('42'),
@@ -123,7 +124,7 @@ describe('getAllStewardRulings', () => {
             }
             return [];
         });
-        (readFileSync as jest.Mock).mockImplementation((path: string) => {
+        (readFileSync as Mock).mockImplementation((path: string) => {
             if (path === `${ROOT}/42/7.json`) {
                 return JSON.stringify([ruling({ ruling_id: 'a' })]);
             }
@@ -140,20 +141,20 @@ describe('getAllStewardRulings', () => {
 
 describe('getStewardRulingsByLeague', () => {
     it('returns [] when the league directory does not exist', () => {
-        (existsSync as jest.Mock).mockImplementation(
+        (existsSync as Mock).mockImplementation(
             (p: string) => p !== `${ROOT}/42`
         );
         expect(getStewardRulingsByLeague(42)).toEqual([]);
     });
 
     it('aggregates every season file for the given league', () => {
-        (readdirSync as jest.Mock).mockImplementation((path: string) => {
+        (readdirSync as Mock).mockImplementation((path: string) => {
             if (path === `${ROOT}/42`) {
                 return [file('7.json'), file('8.json')];
             }
             return [];
         });
-        (readFileSync as jest.Mock).mockImplementation((path: string) => {
+        (readFileSync as Mock).mockImplementation((path: string) => {
             if (path === `${ROOT}/42/7.json`) {
                 return JSON.stringify([ruling({ ruling_id: 'a' })]);
             }
@@ -175,14 +176,14 @@ describe('getStewardRulingsByLeague', () => {
 
 describe('getStewardRulingsBySeason', () => {
     beforeEach(() => {
-        (readdirSync as jest.Mock).mockImplementation((path: string) => {
+        (readdirSync as Mock).mockImplementation((path: string) => {
             if (path === ROOT) return [dir('42')];
             if (path === `${ROOT}/42`) {
                 return [file('7.json'), file('8.json')];
             }
             return [];
         });
-        (readFileSync as jest.Mock).mockImplementation((path: string) => {
+        (readFileSync as Mock).mockImplementation((path: string) => {
             if (path === `${ROOT}/42/7.json`) {
                 return JSON.stringify([
                     ruling({ ruling_id: 'a', season_id: '7' }),
@@ -213,12 +214,12 @@ describe('getStewardRulingsBySeason', () => {
 
 describe('getStewardRulingsByDriver', () => {
     beforeEach(() => {
-        (readdirSync as jest.Mock).mockImplementation((path: string) => {
+        (readdirSync as Mock).mockImplementation((path: string) => {
             if (path === ROOT) return [dir('42')];
             if (path === `${ROOT}/42`) return [file('7.json')];
             return [];
         });
-        (readFileSync as jest.Mock).mockReturnValue(
+        (readFileSync as Mock).mockReturnValue(
             JSON.stringify([
                 ruling({ ruling_id: 'by-driver', driver_id: '555' }),
                 ruling({
@@ -250,12 +251,12 @@ describe('getStewardRulingsByDriver', () => {
 
 describe('getStewardRulingsAsync', () => {
     it('reads and parses an existing (leagueId, seasonId) file', async () => {
-        (readFile as jest.Mock).mockResolvedValue(JSON.stringify([ruling()]));
+        (readFile as Mock).mockResolvedValue(JSON.stringify([ruling()]));
         await expect(getStewardRulingsAsync(42, 7)).resolves.toHaveLength(1);
     });
 
     it('returns an empty array when no file exists', async () => {
-        (readFile as jest.Mock).mockRejectedValue(new Error('ENOENT'));
+        (readFile as Mock).mockRejectedValue(new Error('ENOENT'));
         await expect(getStewardRulingsAsync(42, 7)).resolves.toEqual([]);
     });
 });
@@ -278,12 +279,12 @@ describe('saveStewardRulingsAsync', () => {
 
 describe('getAllStewardRulingsAsync', () => {
     it('returns [] when the root directory does not exist', async () => {
-        (stat as jest.Mock).mockRejectedValue(new Error('ENOENT'));
+        (stat as Mock).mockRejectedValue(new Error('ENOENT'));
         await expect(getAllStewardRulingsAsync()).resolves.toEqual([]);
     });
 
     it('walks leagues and seasons, skipping bad segments', async () => {
-        (readdir as jest.Mock).mockImplementation(async (path: string) => {
+        (readdir as Mock).mockImplementation(async (path: string) => {
             if (path === ROOT) {
                 return [
                     dir('42'),
@@ -305,7 +306,7 @@ describe('getAllStewardRulingsAsync', () => {
             }
             return [];
         });
-        (readFile as jest.Mock).mockImplementation(async (path: string) => {
+        (readFile as Mock).mockImplementation(async (path: string) => {
             if (path === `${ROOT}/42/7.json`) {
                 return JSON.stringify([ruling({ ruling_id: 'a' })]);
             }
@@ -322,7 +323,7 @@ describe('getAllStewardRulingsAsync', () => {
 
 describe('getStewardRulingsByLeagueAsync', () => {
     it('returns [] when the league directory does not exist', async () => {
-        (stat as jest.Mock).mockImplementation(async (p: string) => {
+        (stat as Mock).mockImplementation(async (p: string) => {
             if (p === `${ROOT}/42`) throw new Error('ENOENT');
             return {};
         });
@@ -330,13 +331,13 @@ describe('getStewardRulingsByLeagueAsync', () => {
     });
 
     it('aggregates every season file for the given league', async () => {
-        (readdir as jest.Mock).mockImplementation(async (path: string) => {
+        (readdir as Mock).mockImplementation(async (path: string) => {
             if (path === `${ROOT}/42`) {
                 return [file('7.json'), file('8.json')];
             }
             return [];
         });
-        (readFile as jest.Mock).mockImplementation(async (path: string) => {
+        (readFile as Mock).mockImplementation(async (path: string) => {
             if (path === `${ROOT}/42/7.json`) {
                 return JSON.stringify([ruling({ ruling_id: 'a' })]);
             }
@@ -355,14 +356,14 @@ describe('getStewardRulingsByLeagueAsync', () => {
 
 describe('getStewardRulingsBySeasonAsync', () => {
     beforeEach(() => {
-        (readdir as jest.Mock).mockImplementation(async (path: string) => {
+        (readdir as Mock).mockImplementation(async (path: string) => {
             if (path === ROOT) return [dir('42')];
             if (path === `${ROOT}/42`) {
                 return [file('7.json'), file('8.json')];
             }
             return [];
         });
-        (readFile as jest.Mock).mockImplementation(async (path: string) => {
+        (readFile as Mock).mockImplementation(async (path: string) => {
             if (path === `${ROOT}/42/7.json`) {
                 return JSON.stringify([
                     ruling({ ruling_id: 'a', season_id: '7' }),
@@ -394,12 +395,12 @@ describe('getStewardRulingsBySeasonAsync', () => {
 
 describe('getStewardRulingsByDriverAsync', () => {
     beforeEach(() => {
-        (readdir as jest.Mock).mockImplementation(async (path: string) => {
+        (readdir as Mock).mockImplementation(async (path: string) => {
             if (path === ROOT) return [dir('42')];
             if (path === `${ROOT}/42`) return [file('7.json')];
             return [];
         });
-        (readFile as jest.Mock).mockResolvedValue(
+        (readFile as Mock).mockResolvedValue(
             JSON.stringify([
                 ruling({ ruling_id: 'by-driver', driver_id: '555' }),
                 ruling({

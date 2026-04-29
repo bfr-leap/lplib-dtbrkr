@@ -1,5 +1,5 @@
 // Generated with CLI
-import { getDb, sql, executeInsert } from '../../src/db';
+import { getDb, sql, executeInsert } from '../../db';
 
 const dt = [
     {

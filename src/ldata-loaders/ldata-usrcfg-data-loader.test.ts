@@ -1,5 +1,6 @@
-jest.mock('fs');
-jest.mock('fs/promises');
+import type { Mock } from 'vitest';
+vi.mock('fs');
+vi.mock('fs/promises');
 
 import { readFileSync } from 'fs';
 import { readFile } from 'fs/promises';
@@ -9,12 +10,12 @@ import {
 } from './ldata-usrcfg-data-loader';
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 });
 
 describe('getActiveLeagueSchedule', () => {
     it('reads and parses activeLeagueSchedule.json', () => {
-        (readFileSync as jest.Mock).mockReturnValue('{"leagues":[]}');
+        (readFileSync as Mock).mockReturnValue('{"leagues":[]}');
         expect(getActiveLeagueSchedule()).toEqual({ leagues: [] });
         expect(readFileSync).toHaveBeenCalledWith(
             './public/data/ldata-usrcfg/activeLeagueSchedule.json',
@@ -25,7 +26,7 @@ describe('getActiveLeagueSchedule', () => {
 
 describe('getActiveLeagueScheduleAsync', () => {
     it('reads and parses activeLeagueSchedule.json', async () => {
-        (readFile as jest.Mock).mockResolvedValue('{"leagues":[]}');
+        (readFile as Mock).mockResolvedValue('{"leagues":[]}');
         await expect(getActiveLeagueScheduleAsync()).resolves.toEqual({
             leagues: [],
         });
