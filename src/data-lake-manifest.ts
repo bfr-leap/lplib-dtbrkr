@@ -76,4 +76,34 @@ export const DATA_LAKE_ENDPOINTS: ReadonlyArray<DataLakeEndpoint> = [
         type: 'rulings',
         exampleQuery: { league: 6555, season: 99410 },
     },
+    {
+        namespace: 'ldata-gentxt',
+        type: 'simsessionSummary',
+        exampleQuery: { subsession: 85228727, simsession: 0 },
+    },
+    {
+        namespace: 'ldata-rsltsts',
+        type: 'simSessionResults',
+        exampleQuery: { subsession: 85228727, simsession: 0 },
+    },
+    {
+        namespace: 'ldata-irrpy',
+        type: 'telemetrySubsessions',
+        exampleQuery: { league: 4534 },
+    },
+    {
+        namespace: 'ldata-irweb',
+        type: 'lapChartData',
+        exampleQuery: { subsession: 85056343, simsession: 0 },
+    },
+    {
+        namespace: 'ldata-charts',
+        type: 'startFinishChartData',
+        exampleQuery: { league: 4534, subsession: 85056343, simsession: 0 },
+    },
+    {
+        namespace: 'ldata-charts',
+        type: 'cumulativeDeltaChartData',
+        exampleQuery: { league: 4534, subsession: 85056343, simsession: 0 },
+    },
 ];

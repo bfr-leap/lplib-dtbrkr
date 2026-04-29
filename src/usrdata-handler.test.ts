@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import {
     getDefaultLeagueSeason,
     getIrLinkState,
@@ -8,8 +9,8 @@ import {
 import { sql, getDb } from './db';
 
 // Mock dtlkdata since defLgSeasSubCtx calls it internally
-jest.mock('./dtlkdata', () => ({
-    getDocument: jest.fn(async (query: any) => {
+vi.mock('./dtlkdata', () => ({
+    getDocument: vi.fn(async (query: any) => {
         if (query.type === 'leagueSeasonSessions') {
             return {
                 sessions: [

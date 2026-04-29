@@ -1,5 +1,5 @@
-jest.mock('./dtlkdata', () => ({
-    getDocument: jest.fn(async (query: any) => {
+vi.mock('./dtlkdata', () => ({
+    getDocument: vi.fn(async (query: any) => {
         if (query.type === 'leagueSeasonSessions') {
             return {
                 sessions: [
