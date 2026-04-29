@@ -9,11 +9,14 @@
  */
 
 import type {
+    DriverResults,
     SimsessionResults,
     SeasonSimsessionIndex,
     ST_DriverTelemetry,
     DriverStatsMap,
     M_Member,
+    TrackInfoDirectory,
+    TrackStats,
 } from 'ir-endpoint-types';
 import {
     ldataReadFile,
@@ -162,4 +165,136 @@ export function getSingleMemberDataAsync(
     custId: number
 ): Promise<M_Member | null> {
     return ldataReadFileAsync<M_Member>(MNT_PT, 'singleMemberData', [custId]);
+}
+
+export function getTrackInfoDirectory(
+    leagueId: number
+): TrackInfoDirectory | null {
+    return ldataReadFile<TrackInfoDirectory>(MNT_PT, 'trackInfoDirectory', [
+        leagueId,
+    ]);
+}
+
+export function getTrackInfoDirectoryAsync(
+    leagueId: number
+): Promise<TrackInfoDirectory | null> {
+    return ldataReadFileAsync<TrackInfoDirectory>(
+        MNT_PT,
+        'trackInfoDirectory',
+        [leagueId]
+    );
+}
+
+export function saveTrackInfoDirectory(
+    leagueId: number,
+    data: TrackInfoDirectory
+): void {
+    ldataWriteFile(data, MNT_PT, 'trackInfoDirectory', [leagueId]);
+}
+
+export function saveTrackInfoDirectoryAsync(
+    leagueId: number,
+    data: TrackInfoDirectory
+): Promise<void> {
+    return ldataWriteFileAsync(data, MNT_PT, 'trackInfoDirectory', [leagueId]);
+}
+
+export function getTrackResults(
+    leagueId: number,
+    carId: number,
+    trackId: number
+): TrackStats | null {
+    return ldataReadFile<TrackStats>(MNT_PT, 'trackResults', [
+        leagueId,
+        carId,
+        trackId,
+    ]);
+}
+
+export function getTrackResultsAsync(
+    leagueId: number,
+    carId: number,
+    trackId: number
+): Promise<TrackStats | null> {
+    return ldataReadFileAsync<TrackStats>(MNT_PT, 'trackResults', [
+        leagueId,
+        carId,
+        trackId,
+    ]);
+}
+
+export function saveTrackResults(
+    leagueId: number,
+    carId: number,
+    trackId: number,
+    data: TrackStats
+): void {
+    ldataWriteFile(data, MNT_PT, 'trackResults', [leagueId, carId, trackId]);
+}
+
+export function saveTrackResultsAsync(
+    leagueId: number,
+    carId: number,
+    trackId: number,
+    data: TrackStats
+): Promise<void> {
+    return ldataWriteFileAsync(data, MNT_PT, 'trackResults', [
+        leagueId,
+        carId,
+        trackId,
+    ]);
+}
+
+// `driverSessionResults` is keyed by (leagueId, sessionType, custId) where
+// `sessionType` is a string segment (`race`, `sprint`, `quali`). The fsutil
+// helpers accept mixed numeric/string keys, so this slots into the same
+// path-builder + Kafka notify pipeline as the all-numeric datasets.
+export function getDriverSessionResults(
+    leagueId: number,
+    sessionType: string,
+    custId: number
+): DriverResults | null {
+    return ldataReadFile<DriverResults>(MNT_PT, 'driverSessionResults', [
+        leagueId,
+        sessionType,
+        custId,
+    ]);
+}
+
+export function getDriverSessionResultsAsync(
+    leagueId: number,
+    sessionType: string,
+    custId: number
+): Promise<DriverResults | null> {
+    return ldataReadFileAsync<DriverResults>(MNT_PT, 'driverSessionResults', [
+        leagueId,
+        sessionType,
+        custId,
+    ]);
+}
+
+export function saveDriverSessionResults(
+    leagueId: number,
+    sessionType: string,
+    custId: number,
+    data: DriverResults
+): void {
+    ldataWriteFile(data, MNT_PT, 'driverSessionResults', [
+        leagueId,
+        sessionType,
+        custId,
+    ]);
+}
+
+export function saveDriverSessionResultsAsync(
+    leagueId: number,
+    sessionType: string,
+    custId: number,
+    data: DriverResults
+): Promise<void> {
+    return ldataWriteFileAsync(data, MNT_PT, 'driverSessionResults', [
+        leagueId,
+        sessionType,
+        custId,
+    ]);
 }

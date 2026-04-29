@@ -162,6 +162,30 @@ export function savePacePercentVsIdealLapChartDataAsync(
     );
 }
 
+export function getPacePercentChartData(
+    leagueId: number,
+    subsessionId: number,
+    simsessionNumber: number
+): ChartTable | null {
+    return ldataReadFile<ChartTable>(MNT_PT, 'pacePercentChartData', [
+        leagueId,
+        subsessionId,
+        simsessionNumber,
+    ]);
+}
+
+export function getPacePercentChartDataAsync(
+    leagueId: number,
+    subsessionId: number,
+    simsessionNumber: number
+): Promise<ChartTable | null> {
+    return ldataReadFileAsync<ChartTable>(MNT_PT, 'pacePercentChartData', [
+        leagueId,
+        subsessionId,
+        simsessionNumber,
+    ]);
+}
+
 export function savePacePercentChartData(
     leagueId: number,
     subsessionId: number,

@@ -1,19 +1,37 @@
 jest.mock('./ldata-loaders/iracing-scraped-data-loader', () => ({
     getBlockedSeasonsAsync: jest.fn(),
+    getLapChartDataAsync: jest.fn(),
+    getLeagueRosterAsync: jest.fn(),
     getLeagueSeasonsAsync: jest.fn(),
     getLeagueSeasonSessionsAsync: jest.fn(),
     getMembersDataAsync: jest.fn(),
 }));
 jest.mock('./ldata-loaders/iracing-derived-data-loader', () => ({
+    getDriverSessionResultsAsync: jest.fn(),
     getLeagueDriverStatsAsync: jest.fn(),
     getLeagueSubsessionIndexAsync: jest.fn(),
+    getSimSessionResultsAsync: jest.fn(),
     getSingleMemberDataAsync: jest.fn(),
+    getTrackInfoDirectoryAsync: jest.fn(),
+    getTrackResultsAsync: jest.fn(),
 }));
 jest.mock('./ldata-loaders/ldata-stward-data-loader', () => ({
     getStewardRulingsAsync: jest.fn(),
 }));
+jest.mock('./ldata-loaders/ldata-chart-data-loader', () => ({
+    getCumulativeDeltaChartDataAsync: jest.fn(),
+    getPacePercentChartDataAsync: jest.fn(),
+    getStartFinishChartDataAsync: jest.fn(),
+}));
+jest.mock('./ldata-loaders/ldata-gentxt-data-loader', () => ({
+    getDotdProfileAsync: jest.fn(),
+    getSimsessionSummaryAsync: jest.fn(),
+}));
+jest.mock('./ldata-loaders/ldata-irrpy-data-loader', () => ({
+    getTelemetrySubsessionsAsync: jest.fn(),
+}));
 
-import { getDocument, getFromLoader, getFromUrl } from './dtlkdata';
+import { getDocument, getFromLoader, getFromUrl, UNHANDLED } from './dtlkdata';
 import {
     getBlockedSeasonsAsync,
     getLeagueSeasonsAsync,
@@ -121,16 +139,28 @@ describe('getFromLoader dispatch', () => {
             expect(getLeagueSubsessionIndexAsync).toHaveBeenCalledWith(4534);
         });
 
-        test('routes singleMemberData to getSingleMemberDataAsync (driver key)', async () => {
+        test('routes singleMemberData to getSingleMemberDataAsync (custId key)', async () => {
             (getSingleMemberDataAsync as jest.Mock).mockResolvedValue({
                 cust_id: 12345,
             });
             await getFromLoader({
                 namespace: 'ldata-rsltsts',
                 type: 'singleMemberData',
-                driver: 12345,
+                custId: 12345,
             });
             expect(getSingleMemberDataAsync).toHaveBeenCalledWith(12345);
+        });
+
+        test('singleMemberData also accepts the legacy `driver` alias', async () => {
+            (getSingleMemberDataAsync as jest.Mock).mockResolvedValue({
+                cust_id: 67890,
+            });
+            await getFromLoader({
+                namespace: 'ldata-rsltsts',
+                type: 'singleMemberData',
+                driver: 67890,
+            });
+            expect(getSingleMemberDataAsync).toHaveBeenCalledWith(67890);
         });
     });
 
@@ -196,12 +226,12 @@ describe('getFromLoader dispatch', () => {
     });
 
     describe('unknown namespace/type', () => {
-        test('returns null for an unrecognized namespace/type pair', async () => {
+        test('returns the UNHANDLED sentinel for an unrecognized namespace/type pair', async () => {
             const result = await getFromLoader({
                 namespace: 'ldata-unknown',
                 type: 'mystery',
             });
-            expect(result).toBeNull();
+            expect(result).toBe(UNHANDLED);
         });
     });
 });
@@ -298,16 +328,17 @@ describe('getDocument shadow-mode', () => {
             season: 105035,
         });
 
-        // Caller still gets the URL result.
+        // Caller still gets the URL result (PREFER_LOADER=false).
         expect(result).toEqual({ sessions: [{ subsession_id: 1 }] });
         expect(warnSpy).toHaveBeenCalledTimes(1);
         const msg = String(warnSpy.mock.calls[0][0]);
         expect(msg).toContain('DIVERGENCE');
         expect(msg).toContain('ldata-irweb/leagueSeasonSessions');
         expect(msg).toContain('shape/value mismatch');
+        expect(msg).toContain('returned=url');
     });
 
-    test('logs divergence when URL has data but loader returns null', async () => {
+    test('returns the URL result when loader returns null', async () => {
         mockFetch.mockResolvedValueOnce({
             json: async () => ({ seasons: [] }),
         });
@@ -321,14 +352,15 @@ describe('getDocument shadow-mode', () => {
 
         expect(result).toEqual({ seasons: [] });
         expect(warnSpy).toHaveBeenCalledTimes(1);
-        expect(String(warnSpy.mock.calls[0][0])).toContain(
-            'url=non-null loader=null'
-        );
+        const msg = String(warnSpy.mock.calls[0][0]);
+        expect(msg).toContain('url=non-null loader=null');
+        expect(msg).toContain('returned=url');
     });
 
-    test('logs divergence when loader has data but URL returns null', async () => {
+    test('returns the loader result when URL is null but loader has data', async () => {
         mockFetch.mockRejectedValueOnce(new Error('not found'));
-        (getLeagueSeasonsAsync as jest.Mock).mockResolvedValue({ seasons: [] });
+        const loaderPayload = { seasons: [] };
+        (getLeagueSeasonsAsync as jest.Mock).mockResolvedValue(loaderPayload);
 
         const result = await getDocument({
             namespace: 'ldata-irweb',
@@ -336,12 +368,12 @@ describe('getDocument shadow-mode', () => {
             league: 4534,
         });
 
-        // URL failed → null returned, even though loader had data.
-        expect(result).toBeNull();
+        // URL failed → fall back to loader rather than serving null.
+        expect(result).toEqual(loaderPayload);
         expect(warnSpy).toHaveBeenCalledTimes(1);
-        expect(String(warnSpy.mock.calls[0][0])).toContain(
-            'url=null loader=non-null'
-        );
+        const msg = String(warnSpy.mock.calls[0][0]);
+        expect(msg).toContain('url=null loader=non-null');
+        expect(msg).toContain('returned=loader');
     });
 
     test('does not log when both sources return null', async () => {
@@ -388,5 +420,23 @@ describe('getDocument shadow-mode', () => {
 
         expect(mockFetch).toHaveBeenCalledTimes(1);
         expect(getLeagueSeasonsAsync).toHaveBeenCalledTimes(1);
+    });
+
+    test('logs UNHANDLED (not DIVERGENCE) for an uncatalogued namespace/type', async () => {
+        mockFetch.mockResolvedValueOnce({ json: async () => ({ data: 1 }) });
+
+        const result = await getDocument({
+            namespace: 'ldata-unknown',
+            type: 'mystery',
+            foo: 'bar',
+        });
+
+        expect(result).toEqual({ data: 1 });
+        expect(warnSpy).toHaveBeenCalledTimes(1);
+        const msg = String(warnSpy.mock.calls[0][0]);
+        expect(msg).toContain('UNHANDLED');
+        expect(msg).not.toContain('DIVERGENCE');
+        expect(msg).toContain('ldata-unknown/mystery');
+        expect(msg).toContain('foo=bar');
     });
 });

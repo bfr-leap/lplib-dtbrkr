@@ -18,9 +18,36 @@ import type {
     LeagueSeasonSessions,
     LapChartData,
     MembersData,
+    M_Helmet,
     SubsessionTelemetry,
 } from 'ir-endpoint-types';
-import { ldataReadFile, ldataReadFileAsync } from './fsutil';
+import {
+    ldataReadFile,
+    ldataReadFileAsync,
+    ldataWriteFile,
+    ldataWriteFileAsync,
+} from './fsutil';
+
+// TODO(upstream): move this interface to `ir-endpoint-types`. Mirrors the
+// shape documented in `data-catalog/data-catalog.md` and confirmed against
+// `data-catalog/samples/ldata-irweb/leagueRoster/sample.json`.
+export interface LeagueRosterEntry {
+    cust_id: number;
+    display_name: string;
+    helmet: M_Helmet;
+    owner: boolean;
+    admin: boolean;
+    league_mail_opt_out: boolean;
+    league_pm_opt_out: boolean;
+    league_member_since: string;
+    car_number: string;
+    nick_name: string | null;
+}
+
+export interface LeagueRoster {
+    private_roster: boolean;
+    roster: LeagueRosterEntry[];
+}
 
 const MNT_PT = './public/data/ldata-irweb/';
 
@@ -147,4 +174,25 @@ export async function getBlockedSeasonsAsync(): Promise<BlockedSeasons | null> {
     } catch {
         return null;
     }
+}
+
+export function getLeagueRoster(leagueId: number): LeagueRoster | null {
+    return ldataReadFile<LeagueRoster>(MNT_PT, 'leagueRoster', [leagueId]);
+}
+
+export function getLeagueRosterAsync(
+    leagueId: number
+): Promise<LeagueRoster | null> {
+    return ldataReadFileAsync<LeagueRoster>(MNT_PT, 'leagueRoster', [leagueId]);
+}
+
+export function saveLeagueRoster(leagueId: number, data: LeagueRoster): void {
+    ldataWriteFile(data, MNT_PT, 'leagueRoster', [leagueId]);
+}
+
+export function saveLeagueRosterAsync(
+    leagueId: number,
+    data: LeagueRoster
+): Promise<void> {
+    return ldataWriteFileAsync(data, MNT_PT, 'leagueRoster', [leagueId]);
 }

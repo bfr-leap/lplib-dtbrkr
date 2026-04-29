@@ -3,7 +3,9 @@
 //
 // Iterates every entry in `DATA_LAKE_ENDPOINTS` and asserts that the
 // dispatcher in `src/dtlkdata.ts` either routes it to a loader (returning a
-// non-null sentinel) or has it explicitly marked `unshadowed` with a reason.
+// non-`UNHANDLED` value) or has it explicitly marked `unshadowed` with a
+// reason (in which case the dispatcher is expected to fall through and
+// return the `UNHANDLED` sentinel).
 //
 // Each loader module is mocked with a Proxy whose `get` returns an async
 // function resolving to a SENTINEL value, so we don't need to maintain a
@@ -49,8 +51,41 @@ jest.mock('./ldata-loaders/ldata-stward-data-loader', () =>
         }
     )
 );
+jest.mock('./ldata-loaders/ldata-chart-data-loader', () =>
+    new Proxy(
+        {},
+        {
+            get: (_t, prop) => {
+                if (prop === '__esModule') return true;
+                return async () => ({ __coverage_sentinel: true });
+            },
+        }
+    )
+);
+jest.mock('./ldata-loaders/ldata-gentxt-data-loader', () =>
+    new Proxy(
+        {},
+        {
+            get: (_t, prop) => {
+                if (prop === '__esModule') return true;
+                return async () => ({ __coverage_sentinel: true });
+            },
+        }
+    )
+);
+jest.mock('./ldata-loaders/ldata-irrpy-data-loader', () =>
+    new Proxy(
+        {},
+        {
+            get: (_t, prop) => {
+                if (prop === '__esModule') return true;
+                return async () => ({ __coverage_sentinel: true });
+            },
+        }
+    )
+);
 
-import { getFromLoader } from './dtlkdata';
+import { getFromLoader, UNHANDLED } from './dtlkdata';
 import {
     DATA_LAKE_ENDPOINTS,
     type DataLakeEndpoint,
@@ -79,8 +114,8 @@ describe('data-lake dispatcher coverage', () => {
         (_name, entry) => {
             test(
                 entry.unshadowed
-                    ? `is exempt from shadow-mode (reason: ${entry.unshadowed.reason}) — dispatcher must return null`
-                    : 'is wired into the dispatcher — must return non-null for a valid query',
+                    ? `is exempt from shadow-mode (reason: ${entry.unshadowed.reason}) — dispatcher must fall through to UNHANDLED`
+                    : 'is wired into the dispatcher — must NOT fall through to UNHANDLED',
                 async () => {
                     const result = await getFromLoader({
                         namespace: entry.namespace,
@@ -89,13 +124,13 @@ describe('data-lake dispatcher coverage', () => {
                     });
 
                     if (entry.unshadowed) {
-                        expect(result).toBeNull();
+                        expect(result).toBe(UNHANDLED);
                     } else {
                         // If this fails, you added a manifest entry without
                         // wiring the case in src/dtlkdata.ts (or the
                         // exampleQuery is missing keys the dispatcher
                         // requires before reaching the loader call).
-                        expect(result).not.toBeNull();
+                        expect(result).not.toBe(UNHANDLED);
                     }
                 }
             );
