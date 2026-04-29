@@ -14,6 +14,7 @@ These samples serve two goals:
 ```
 samples/
 ├── ldata-irweb/
+│   ├── blockedSeasons.json
 │   ├── lapChartData/sample.json
 │   ├── leagueRoster/sample.json
 │   ├── leagueSeasons/sample.json
@@ -42,7 +43,6 @@ samples/
 │   └── simsessionHighlights/sample.json
 └── ldata-usrcfg/
     ├── activeLeagueSchedule.json
-    ├── blockedSeasons.json
     ├── trackDisplayInfo.json
     └── leagueTeamsInfo/sample.json
 ```

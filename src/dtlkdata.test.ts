@@ -1,10 +1,12 @@
 jest.mock('./ldata-loaders/iracing-scraped-data-loader', () => ({
+    getBlockedSeasonsAsync: jest.fn(),
     getLeagueSeasonsAsync: jest.fn(),
     getLeagueSeasonSessionsAsync: jest.fn(),
     getMembersDataAsync: jest.fn(),
 }));
 jest.mock('./ldata-loaders/iracing-derived-data-loader', () => ({
     getLeagueDriverStatsAsync: jest.fn(),
+    getLeagueSubsessionIndexAsync: jest.fn(),
     getSingleMemberDataAsync: jest.fn(),
 }));
 jest.mock('./ldata-loaders/ldata-stward-data-loader', () => ({
@@ -13,12 +15,14 @@ jest.mock('./ldata-loaders/ldata-stward-data-loader', () => ({
 
 import { getDocument, getFromLoader, getFromUrl } from './dtlkdata';
 import {
+    getBlockedSeasonsAsync,
     getLeagueSeasonsAsync,
     getLeagueSeasonSessionsAsync,
     getMembersDataAsync,
 } from './ldata-loaders/iracing-scraped-data-loader';
 import {
     getLeagueDriverStatsAsync,
+    getLeagueSubsessionIndexAsync,
     getSingleMemberDataAsync,
 } from './ldata-loaders/iracing-derived-data-loader';
 import { getStewardRulingsAsync } from './ldata-loaders/ldata-stward-data-loader';
@@ -78,6 +82,22 @@ describe('getFromLoader dispatch', () => {
             });
             expect(getMembersDataAsync).toHaveBeenCalledWith(4534, 105035);
         });
+
+        test('routes blockedSeasons to getBlockedSeasonsAsync (no key args)', async () => {
+            (getBlockedSeasonsAsync as jest.Mock).mockResolvedValue({
+                '6555_76693': true,
+                min_season_id: 60000,
+            });
+            const result = await getFromLoader({
+                namespace: 'ldata-irweb',
+                type: 'blockedSeasons',
+            });
+            expect(getBlockedSeasonsAsync).toHaveBeenCalledWith();
+            expect(result).toEqual({
+                '6555_76693': true,
+                min_season_id: 60000,
+            });
+        });
     });
 
     describe('ldata-rsltsts', () => {
@@ -89,6 +109,16 @@ describe('getFromLoader dispatch', () => {
                 league: 4534,
             });
             expect(getLeagueDriverStatsAsync).toHaveBeenCalledWith(4534);
+        });
+
+        test('routes leagueSimsessionIndex to getLeagueSubsessionIndexAsync', async () => {
+            (getLeagueSubsessionIndexAsync as jest.Mock).mockResolvedValue([]);
+            await getFromLoader({
+                namespace: 'ldata-rsltsts',
+                type: 'leagueSimsessionIndex',
+                league: 4534,
+            });
+            expect(getLeagueSubsessionIndexAsync).toHaveBeenCalledWith(4534);
         });
 
         test('routes singleMemberData to getSingleMemberDataAsync (driver key)', async () => {

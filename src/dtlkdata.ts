@@ -1,11 +1,13 @@
 import { isDeepStrictEqual } from 'util';
 import {
+    getBlockedSeasonsAsync,
     getLeagueSeasonsAsync,
     getLeagueSeasonSessionsAsync,
     getMembersDataAsync,
 } from './ldata-loaders/iracing-scraped-data-loader';
 import {
     getLeagueDriverStatsAsync,
+    getLeagueSubsessionIndexAsync,
     getSingleMemberDataAsync,
 } from './ldata-loaders/iracing-derived-data-loader';
 import { getStewardRulingsAsync } from './ldata-loaders/ldata-stward-data-loader';
@@ -88,10 +90,18 @@ export async function getFromLoader(query: Query): Promise<any> {
             if (league === null || season === null) return null;
             return await getMembersDataAsync(league, season);
         }
+        case 'ldata-irweb/blockedSeasons': {
+            return await getBlockedSeasonsAsync();
+        }
         case 'ldata-rsltsts/leagueDriverStats': {
             const league = num(query.league);
             if (league === null) return null;
             return await getLeagueDriverStatsAsync(league);
+        }
+        case 'ldata-rsltsts/leagueSimsessionIndex': {
+            const league = num(query.league);
+            if (league === null) return null;
+            return await getLeagueSubsessionIndexAsync(league);
         }
         case 'ldata-rsltsts/singleMemberData': {
             const driver = num(query.driver);

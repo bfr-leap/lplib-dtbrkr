@@ -4,6 +4,8 @@ jest.mock('fs/promises');
 import { readFileSync } from 'fs';
 import { readFile } from 'fs/promises';
 import {
+    getBlockedSeasons,
+    getBlockedSeasonsAsync,
     getLeagueDirectory,
     getLeagueSeasons,
     getLeagueSeasonSessions,
@@ -215,5 +217,59 @@ describe('getMembersDataAsync', () => {
     it('returns null on read failure', async () => {
         (readFile as jest.Mock).mockRejectedValue(new Error('ENOENT'));
         await expect(getMembersDataAsync(42, 7)).resolves.toBeNull();
+    });
+});
+
+describe('getBlockedSeasons', () => {
+    it('reads the keyless blockedSeasons.json at the namespace root', () => {
+        (readFileSync as jest.Mock).mockReturnValue(
+            '{"6555_76693":true,"min_season_id":60000}'
+        );
+        expect(getBlockedSeasons()).toEqual({
+            '6555_76693': true,
+            min_season_id: 60000,
+        });
+        expect(readFileSync).toHaveBeenCalledWith(
+            `${MNT}blockedSeasons.json`,
+            expect.any(Object)
+        );
+    });
+
+    it('returns null on read failure', () => {
+        (readFileSync as jest.Mock).mockImplementation(() => {
+            throw new Error('ENOENT');
+        });
+        expect(getBlockedSeasons()).toBeNull();
+    });
+
+    it('returns null on malformed JSON', () => {
+        (readFileSync as jest.Mock).mockReturnValue('not json');
+        expect(getBlockedSeasons()).toBeNull();
+    });
+});
+
+describe('getBlockedSeasonsAsync', () => {
+    it('reads the keyless blockedSeasons.json at the namespace root', async () => {
+        (readFile as jest.Mock).mockResolvedValue(
+            '{"6555_76693":true,"min_season_id":60000}'
+        );
+        await expect(getBlockedSeasonsAsync()).resolves.toEqual({
+            '6555_76693': true,
+            min_season_id: 60000,
+        });
+        expect(readFile).toHaveBeenCalledWith(
+            `${MNT}blockedSeasons.json`,
+            expect.any(Object)
+        );
+    });
+
+    it('returns null on read failure', async () => {
+        (readFile as jest.Mock).mockRejectedValue(new Error('ENOENT'));
+        await expect(getBlockedSeasonsAsync()).resolves.toBeNull();
+    });
+
+    it('returns null on malformed JSON', async () => {
+        (readFile as jest.Mock).mockResolvedValue('not json');
+        await expect(getBlockedSeasonsAsync()).resolves.toBeNull();
     });
 });

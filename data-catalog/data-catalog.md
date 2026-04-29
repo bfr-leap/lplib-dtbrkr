@@ -87,6 +87,7 @@ Contains downloads from the iRacing data web API, including lap chart data, leag
 | `leagueSeasons/` | Season metadata and scoring rules | `{league_id}.json` | `seasons[]`: `season_id`, `points_system`, `active`, `num_drops` |
 | `leagueSeasonSessions/` | Session schedules, weather, winners | `{league_id}/{season_id}.json` | `sessions[]`: track, weather, launch_at, winner info |
 | `membersData/` | Driver profiles with ratings & licenses | `{league_id}/{season_id}.json` | `members[]`: `cust_id`, `display_name`, licenses by discipline, `irating` |
+| `blockedSeasons.json` | Seasons excluded from processing (keyless) | `blockedSeasons.json` | `{league_season_key}`: boolean, `min_season_id` |
 
 ---
 
@@ -210,7 +211,6 @@ League configuration, scheduling, and display settings.
 |------|-------------|------------|
 | `activeLeagueSchedule.json` | League schedules with journalist style config | `leagues[]`: `league_id`, `name`, `seasons[]` with `events[]` |
 | `trackDisplayInfo.json` | Track ID → display name mapping | `{track_id}`: `short_display`, `display` |
-| `blockedSeasons.json` | Seasons excluded from processing | `{league_season_key}`: boolean, `min_season_id` |
 | `leagueTeamsInfo/{league_id}.json` | Team rosters per season | `seasons[]`: `season_id`, `teams[]` with `team_name`, `team_members[]` |
 
 ---

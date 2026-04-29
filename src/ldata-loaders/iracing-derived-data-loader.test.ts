@@ -6,12 +6,12 @@ import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { readFile, writeFile, mkdir, stat } from 'fs/promises';
 import {
     getSimSessionResults,
-    getLeaguSubsessionIndex,
+    getLeagueSubsessionIndex,
     getSimsessionDriverTelemetry,
     getProcessedTelemetryManifest,
     saveProcessedTelemetryManifest,
     getSimSessionResultsAsync,
-    getLeaguSubsessionIndexAsync,
+    getLeagueSubsessionIndexAsync,
     getSimsessionDriverTelemetryAsync,
     getProcessedTelemetryManifestAsync,
     saveProcessedTelemetryManifestAsync,
@@ -58,10 +58,10 @@ describe('getSimSessionResults', () => {
     });
 });
 
-describe('getLeaguSubsessionIndex', () => {
+describe('getLeagueSubsessionIndex', () => {
     it('reads the per-league simsession index', () => {
         (readFileSync as jest.Mock).mockReturnValue('[]');
-        expect(getLeaguSubsessionIndex(42)).toEqual([]);
+        expect(getLeagueSubsessionIndex(42)).toEqual([]);
         expect(readFileSync).toHaveBeenCalledWith(
             `${MNT}leagueSimsessionIndex/42.json`,
             expect.any(Object)
@@ -72,7 +72,7 @@ describe('getLeaguSubsessionIndex', () => {
         (readFileSync as jest.Mock).mockImplementation(() => {
             throw new Error('ENOENT');
         });
-        expect(getLeaguSubsessionIndex(42)).toBeNull();
+        expect(getLeagueSubsessionIndex(42)).toBeNull();
     });
 });
 
@@ -155,10 +155,10 @@ describe('getSimSessionResultsAsync', () => {
     });
 });
 
-describe('getLeaguSubsessionIndexAsync', () => {
+describe('getLeagueSubsessionIndexAsync', () => {
     it('reads the per-league simsession index', async () => {
         (readFile as jest.Mock).mockResolvedValue('[]');
-        await expect(getLeaguSubsessionIndexAsync(42)).resolves.toEqual([]);
+        await expect(getLeagueSubsessionIndexAsync(42)).resolves.toEqual([]);
         expect(readFile).toHaveBeenCalledWith(
             `${MNT}leagueSimsessionIndex/42.json`,
             expect.any(Object)
@@ -167,7 +167,7 @@ describe('getLeaguSubsessionIndexAsync', () => {
 
     it('returns null on read failure', async () => {
         (readFile as jest.Mock).mockRejectedValue(new Error('ENOENT'));
-        await expect(getLeaguSubsessionIndexAsync(42)).resolves.toBeNull();
+        await expect(getLeagueSubsessionIndexAsync(42)).resolves.toBeNull();
     });
 });
 

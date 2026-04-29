@@ -44,7 +44,7 @@ export function getSimSessionResultsAsync(
     ]);
 }
 
-export function getLeaguSubsessionIndex(
+export function getLeagueSubsessionIndex(
     leagueId: number
 ): SeasonSimsessionIndex[] | null {
     return ldataReadFile<SeasonSimsessionIndex[]>(
@@ -54,7 +54,7 @@ export function getLeaguSubsessionIndex(
     );
 }
 
-export function getLeaguSubsessionIndexAsync(
+export function getLeagueSubsessionIndexAsync(
     leagueId: number
 ): Promise<SeasonSimsessionIndex[] | null> {
     return ldataReadFileAsync<SeasonSimsessionIndex[]>(
