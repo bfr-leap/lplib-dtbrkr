@@ -85,6 +85,20 @@ export function getLeagueSeasonsAsync(
     ]);
 }
 
+export function saveLeagueSeasons(
+    leagueId: number,
+    data: LeagueSeasons
+): void {
+    ldataWriteFile(data, MNT_PT, 'leagueSeasons', [leagueId]);
+}
+
+export function saveLeagueSeasonsAsync(
+    leagueId: number,
+    data: LeagueSeasons
+): Promise<void> {
+    return ldataWriteFileAsync(data, MNT_PT, 'leagueSeasons', [leagueId]);
+}
+
 export function getLeagueSeasonSessions(
     leagueId: number,
     seasonId: number
@@ -104,6 +118,25 @@ export function getLeagueSeasonSessionsAsync(
         'leagueSeasonSessions',
         [leagueId, seasonId]
     );
+}
+
+export function saveLeagueSeasonSessions(
+    leagueId: number,
+    seasonId: number,
+    data: LeagueSeasonSessions
+): void {
+    ldataWriteFile(data, MNT_PT, 'leagueSeasonSessions', [leagueId, seasonId]);
+}
+
+export function saveLeagueSeasonSessionsAsync(
+    leagueId: number,
+    seasonId: number,
+    data: LeagueSeasonSessions
+): Promise<void> {
+    return ldataWriteFileAsync(data, MNT_PT, 'leagueSeasonSessions', [
+        leagueId,
+        seasonId,
+    ]);
 }
 
 export function getLapChartData(
@@ -126,6 +159,28 @@ export function getLapChartDataAsync(
     ]);
 }
 
+export function saveLapChartData(
+    subsessionId: number,
+    simsessionNumber: number,
+    data: LapChartData
+): void {
+    ldataWriteFile(data, MNT_PT, 'lapChartData', [
+        subsessionId,
+        simsessionNumber,
+    ]);
+}
+
+export function saveLapChartDataAsync(
+    subsessionId: number,
+    simsessionNumber: number,
+    data: LapChartData
+): Promise<void> {
+    return ldataWriteFileAsync(data, MNT_PT, 'lapChartData', [
+        subsessionId,
+        simsessionNumber,
+    ]);
+}
+
 export function getMembersData(
     leagueId: number,
     seasonId: number
@@ -141,6 +196,25 @@ export function getMembersDataAsync(
     seasonId: number
 ): Promise<MembersData | null> {
     return ldataReadFileAsync<MembersData>(MNT_PT, 'membersData', [
+        leagueId,
+        seasonId,
+    ]);
+}
+
+export function saveMembersData(
+    leagueId: number,
+    seasonId: number,
+    data: MembersData
+): void {
+    ldataWriteFile(data, MNT_PT, 'membersData', [leagueId, seasonId]);
+}
+
+export function saveMembersDataAsync(
+    leagueId: number,
+    seasonId: number,
+    data: MembersData
+): Promise<void> {
+    return ldataWriteFileAsync(data, MNT_PT, 'membersData', [
         leagueId,
         seasonId,
     ]);
