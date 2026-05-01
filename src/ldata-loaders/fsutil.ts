@@ -1,4 +1,10 @@
-import { writeFileSync, existsSync, mkdirSync, readFileSync } from 'fs';
+import {
+    writeFileSync,
+    existsSync,
+    mkdirSync,
+    readFileSync,
+    statSync,
+} from 'fs';
 import { writeFile, mkdir, readFile, stat } from 'fs/promises';
 import { notifyWrite } from './kafka-notify';
 
@@ -28,6 +34,51 @@ function encodeKey(k: LdataKey): string {
     return typeof k === 'number' && k < 0 ? `n${-k}` : String(k);
 }
 
+// Cheap-to-expensive equality check: stat first to compare sizes (a mismatch
+// proves the contents differ without reading the file), then fall back to a
+// full byte comparison only when sizes match.
+function fileMatchesPayload(filePath: string, payload: string): boolean {
+    let size: number | undefined;
+    try {
+        size = statSync(filePath).size;
+    } catch {
+        return false;
+    }
+    if (size !== Buffer.byteLength(payload)) {
+        return false;
+    }
+    try {
+        return (
+            readFileSync(filePath, { encoding: 'utf8', flag: 'r' }) === payload
+        );
+    } catch {
+        return false;
+    }
+}
+
+async function fileMatchesPayloadAsync(
+    filePath: string,
+    payload: string
+): Promise<boolean> {
+    let size: number | undefined;
+    try {
+        size = (await stat(filePath)).size;
+    } catch {
+        return false;
+    }
+    if (size !== Buffer.byteLength(payload)) {
+        return false;
+    }
+    try {
+        return (
+            (await readFile(filePath, { encoding: 'utf8', flag: 'r' })) ===
+            payload
+        );
+    } catch {
+        return false;
+    }
+}
+
 export function ldataWriteFile(
     obj: any,
     mountPoint: string,
@@ -35,14 +86,20 @@ export function ldataWriteFile(
     keys: LdataKey[]
 ) {
     let keyStrings = keys.map(encodeKey);
-    const path = `${mountPoint}${datasetName}/${keyStrings
+    const filePath = `${mountPoint}${datasetName}/${keyStrings.join('/')}.json`;
+    const payload = JSON.stringify(obj);
+
+    if (fileMatchesPayload(filePath, payload)) {
+        return;
+    }
+
+    const dirPath = `${mountPoint}${datasetName}/${keyStrings
         .slice(0, -1)
         .join('/')}`;
-    if (!existsSync(path)) {
-        mkdirSync(path, { recursive: true });
+    if (!existsSync(dirPath)) {
+        mkdirSync(dirPath, { recursive: true });
     }
-    const filePath = `${mountPoint}${datasetName}/${keyStrings.join('/')}.json`;
-    writeFileSync(filePath, JSON.stringify(obj));
+    writeFileSync(filePath, payload);
 
     notifyWrite(mountPointToDatasetId(mountPoint), datasetName, keys);
 }
@@ -54,20 +111,26 @@ export async function ldataWriteFileAsync(
     keys: LdataKey[]
 ): Promise<void> {
     let keyStrings = keys.map(encodeKey);
-    const path = `${mountPoint}${datasetName}/${keyStrings
+    const filePath = `${mountPoint}${datasetName}/${keyStrings.join('/')}.json`;
+    const payload = JSON.stringify(obj);
+
+    if (await fileMatchesPayloadAsync(filePath, payload)) {
+        return;
+    }
+
+    const dirPath = `${mountPoint}${datasetName}/${keyStrings
         .slice(0, -1)
         .join('/')}`;
     let dirExists = true;
     try {
-        await stat(path);
+        await stat(dirPath);
     } catch {
         dirExists = false;
     }
     if (!dirExists) {
-        await mkdir(path, { recursive: true });
+        await mkdir(dirPath, { recursive: true });
     }
-    const filePath = `${mountPoint}${datasetName}/${keyStrings.join('/')}.json`;
-    await writeFile(filePath, JSON.stringify(obj));
+    await writeFile(filePath, payload);
 
     notifyWrite(mountPointToDatasetId(mountPoint), datasetName, keys);
 }

@@ -4,7 +4,13 @@ jest.mock('./kafka-notify', () => ({
     notifyWrite: jest.fn(),
 }));
 
-import { writeFileSync, existsSync, mkdirSync, readFileSync } from 'fs';
+import {
+    writeFileSync,
+    existsSync,
+    mkdirSync,
+    readFileSync,
+    statSync,
+} from 'fs';
 import { writeFile, mkdir, readFile, stat } from 'fs/promises';
 import {
     ldataWriteFile,
@@ -86,6 +92,57 @@ describe('ldataWriteFile', () => {
         ldataWriteFile({}, './public/data/ldata-gentxt/', 'd', [1]);
 
         expect(order).toEqual(['write', 'notify']);
+    });
+
+    it('skips the write and notification when contents are unchanged', () => {
+        const payload = '{"foo":1}';
+        (statSync as jest.Mock).mockReturnValue({
+            size: Buffer.byteLength(payload),
+        });
+        (readFileSync as jest.Mock).mockReturnValue(payload);
+
+        ldataWriteFile(
+            { foo: 1 },
+            './public/data/ldata-charts/',
+            'd',
+            [1]
+        );
+
+        expect(writeFileSync).not.toHaveBeenCalled();
+        expect(notifyWrite).not.toHaveBeenCalled();
+    });
+
+    it('writes and notifies when sizes match but contents differ', () => {
+        const payload = '{"foo":1}';
+        (statSync as jest.Mock).mockReturnValue({
+            size: Buffer.byteLength(payload),
+        });
+        (readFileSync as jest.Mock).mockReturnValue('{"foo":2}');
+
+        ldataWriteFile(
+            { foo: 1 },
+            './public/data/ldata-charts/',
+            'd',
+            [1]
+        );
+
+        expect(writeFileSync).toHaveBeenCalled();
+        expect(notifyWrite).toHaveBeenCalled();
+    });
+
+    it('skips the read when sizes differ', () => {
+        (statSync as jest.Mock).mockReturnValue({ size: 1 });
+
+        ldataWriteFile(
+            { foo: 1 },
+            './public/data/ldata-charts/',
+            'd',
+            [1]
+        );
+
+        expect(readFileSync).not.toHaveBeenCalled();
+        expect(writeFileSync).toHaveBeenCalled();
+        expect(notifyWrite).toHaveBeenCalled();
     });
 });
 
@@ -225,6 +282,57 @@ describe('ldataWriteFileAsync', () => {
         await ldataWriteFileAsync({}, './public/data/ldata-gentxt/', 'd', [1]);
 
         expect(order).toEqual(['write', 'notify']);
+    });
+
+    it('skips the write and notification when contents are unchanged', async () => {
+        const payload = '{"foo":1}';
+        (stat as jest.Mock).mockResolvedValue({
+            size: Buffer.byteLength(payload),
+        });
+        (readFile as jest.Mock).mockResolvedValue(payload);
+
+        await ldataWriteFileAsync(
+            { foo: 1 },
+            './public/data/ldata-charts/',
+            'd',
+            [1]
+        );
+
+        expect(writeFile).not.toHaveBeenCalled();
+        expect(notifyWrite).not.toHaveBeenCalled();
+    });
+
+    it('writes and notifies when sizes match but contents differ', async () => {
+        const payload = '{"foo":1}';
+        (stat as jest.Mock).mockResolvedValue({
+            size: Buffer.byteLength(payload),
+        });
+        (readFile as jest.Mock).mockResolvedValue('{"foo":2}');
+
+        await ldataWriteFileAsync(
+            { foo: 1 },
+            './public/data/ldata-charts/',
+            'd',
+            [1]
+        );
+
+        expect(writeFile).toHaveBeenCalled();
+        expect(notifyWrite).toHaveBeenCalled();
+    });
+
+    it('skips the read when sizes differ', async () => {
+        (stat as jest.Mock).mockResolvedValue({ size: 1 });
+
+        await ldataWriteFileAsync(
+            { foo: 1 },
+            './public/data/ldata-charts/',
+            'd',
+            [1]
+        );
+
+        expect(readFile).not.toHaveBeenCalled();
+        expect(writeFile).toHaveBeenCalled();
+        expect(notifyWrite).toHaveBeenCalled();
     });
 });
 
