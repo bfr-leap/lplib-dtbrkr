@@ -134,6 +134,45 @@ describe('notifyWrite', () => {
         expect(sendFailLogs).toHaveLength(1);
     });
 
+    it('skips Kafka entirely when KAFKA_DISABLED=1 and logs the payload', async () => {
+        const prev = process.env.KAFKA_DISABLED;
+        process.env.KAFKA_DISABLED = '1';
+        try {
+            const { notifyWrite } = require('./kafka-notify');
+            const { connect, send, KafkaCtor } = kafkaMocks();
+
+            notifyWrite('ldata-charts', 'startFinishChartData', [1234, -7, 0]);
+            notifyWrite('ldata-charts', 'b', [2]);
+            await flush();
+
+            expect(KafkaCtor).not.toHaveBeenCalled();
+            expect(connect).not.toHaveBeenCalled();
+            expect(send).not.toHaveBeenCalled();
+
+            const devLogs = logSpy.mock.calls.filter(
+                (args) =>
+                    typeof args[0] === 'string' &&
+                    args[0].includes('KAFKA_DISABLED=1') &&
+                    args[0].includes('message triggered but not delivered')
+            );
+            expect(devLogs).toHaveLength(2);
+
+            const firstLog = devLogs[0][0] as string;
+            const payloadJson = firstLog.slice(firstLog.indexOf('{'));
+            const payload = JSON.parse(payloadJson);
+            expect(payload).toMatchObject({
+                dataset_id: 'ldata-charts:strm',
+                source: 'lplib-ldloadutl',
+                update_type: 'modification',
+                affected_fields: ['startFinishChartData/1234/n7/0'],
+                change_summary: 'write: startFinishChartData 1234:-7:0',
+            });
+        } finally {
+            if (prev === undefined) delete process.env.KAFKA_DISABLED;
+            else process.env.KAFKA_DISABLED = prev;
+        }
+    });
+
     it('stringifies non-Error rejection values in the failure log', async () => {
         const { send } = kafkaMocks();
         send.mockRejectedValueOnce('raw-string-error');

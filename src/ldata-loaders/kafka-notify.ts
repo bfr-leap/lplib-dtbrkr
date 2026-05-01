@@ -9,6 +9,7 @@ const STREAM_SUFFIX = ':strm';
 let producer: Producer | null = null;
 let initPromise: Promise<void> | null = null;
 let disabled = false;
+const devDisabled = process.env.KAFKA_DISABLED === '1';
 
 function init(): Promise<void> {
     if (initPromise) return initPromise;
@@ -52,6 +53,13 @@ export function notifyWrite(
         affected_fields: [affectedField],
         change_summary: `write: ${datasetName} ${summaryKeys}`,
     };
+
+    if (devDisabled) {
+        console.log(
+            `ldloadutl: KAFKA_DISABLED=1, message triggered but not delivered: ${JSON.stringify(payload)}`
+        );
+        return;
+    }
 
     init()
         .then(() => {
