@@ -298,3 +298,92 @@ export function saveDriverSessionResultsAsync(
         custId,
     ]);
 }
+
+export function saveSimSessionResults(
+    subsessionId: number,
+    simsessionNumber: number,
+    data: SimsessionResults
+): void {
+    ldataWriteFile(data, MNT_PT, 'simSessionResults', [
+        subsessionId,
+        simsessionNumber,
+    ]);
+}
+
+export function saveSimSessionResultsAsync(
+    subsessionId: number,
+    simsessionNumber: number,
+    data: SimsessionResults
+): Promise<void> {
+    return ldataWriteFileAsync(data, MNT_PT, 'simSessionResults', [
+        subsessionId,
+        simsessionNumber,
+    ]);
+}
+
+export function saveLeagueSubsessionIndex(
+    leagueId: number,
+    data: SeasonSimsessionIndex[]
+): void {
+    ldataWriteFile(data, MNT_PT, 'leagueSimsessionIndex', [leagueId]);
+}
+
+export function saveLeagueSubsessionIndexAsync(
+    leagueId: number,
+    data: SeasonSimsessionIndex[]
+): Promise<void> {
+    return ldataWriteFileAsync(data, MNT_PT, 'leagueSimsessionIndex', [
+        leagueId,
+    ]);
+}
+
+export function saveSimsessionDriverTelemetry(
+    subsession: number,
+    simsession: number,
+    driver: number,
+    data: ST_DriverTelemetry
+): void {
+    ldataWriteFile(data, MNT_PT, 'simsessionDriverTelemetry', [
+        subsession,
+        simsession,
+        driver,
+    ]);
+}
+
+export function saveSimsessionDriverTelemetryAsync(
+    subsession: number,
+    simsession: number,
+    driver: number,
+    data: ST_DriverTelemetry
+): Promise<void> {
+    return ldataWriteFileAsync(data, MNT_PT, 'simsessionDriverTelemetry', [
+        subsession,
+        simsession,
+        driver,
+    ]);
+}
+
+export function saveLeagueDriverStats(
+    leagueId: number,
+    data: DriverStatsMap
+): void {
+    ldataWriteFile(data, MNT_PT, 'leagueDriverStats', [leagueId]);
+}
+
+export function saveLeagueDriverStatsAsync(
+    leagueId: number,
+    data: DriverStatsMap
+): Promise<void> {
+    return ldataWriteFileAsync(data, MNT_PT, 'leagueDriverStats', [leagueId]);
+}
+
+export function saveSingleMemberData(custId: number, data: M_Member): void {
+    ldataWriteFile(data, MNT_PT, 'singleMemberData', [custId]);
+}
+
+export function saveSingleMemberDataAsync(
+    custId: number,
+    data: M_Member
+): Promise<void> {
+    return ldataWriteFileAsync(data, MNT_PT, 'singleMemberData', [custId]);
+}

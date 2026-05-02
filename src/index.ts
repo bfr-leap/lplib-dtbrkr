@@ -88,6 +88,16 @@ export {
     getDriverSessionResultsAsync,
     saveDriverSessionResults,
     saveDriverSessionResultsAsync,
+    saveSimSessionResults,
+    saveSimSessionResultsAsync,
+    saveLeagueSubsessionIndex,
+    saveLeagueSubsessionIndexAsync,
+    saveSimsessionDriverTelemetry,
+    saveSimsessionDriverTelemetryAsync,
+    saveLeagueDriverStats,
+    saveLeagueDriverStatsAsync,
+    saveSingleMemberData,
+    saveSingleMemberDataAsync,
 } from './ldata-loaders/iracing-derived-data-loader';
 
 // `getActiveLeagueSchedule` is also the name of the SQL-backed accessor
