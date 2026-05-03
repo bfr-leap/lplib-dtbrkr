@@ -1,6 +1,7 @@
 import type { StewardRuling, StewardConfig } from 'ir-endpoint-types';
 import { getDocument as getDataLakeDocument } from './dtlkdata';
 import { sql } from './db';
+import { notifyDbWrite } from './db-kafka-notify';
 
 // ---------------------------------------------------------------------------
 // Data-lake accessors (ldata-stward)
@@ -123,6 +124,8 @@ export async function setRaceControlChannelId(
         VALUES (${league_id}, ${race_control_channel_id})
         ON CONFLICT(league_id) DO UPDATE SET
             race_control_channel_id = excluded.race_control_channel_id`;
+
+    notifyDbWrite('db-steward', 'stewardConfig', [league_id], 'update');
 }
 
 // ---------------------------------------------------------------------------

@@ -1,5 +1,6 @@
 import { getDocument as getDataLakeDocument } from './dtlkdata';
 import { sql } from './db';
+import { notifyDbWrite } from './db-kafka-notify';
 import { isValidSeason, isValidLeague } from './valid-util';
 
 export async function getDefaultLeagueSeason(user_id: string): Promise<any> {
@@ -93,6 +94,8 @@ export async function updIrLinkDriver(
         INSERT INTO user_ir_cust_mappings (user_id, verify_code, ir_cust_id, try_count)
         VALUES (${user_id}, ${verify_code}, ${ir_cust_id}, ${try_count})`;
 
+    notifyDbWrite('db-user-cfg', 'irCustMapping', [user_id], 'update');
+
     return {};
 }
 
@@ -113,11 +116,13 @@ export async function updIrLinkCode(
     if (null !== userLink && userLink.verify_code?.toString() === verify_code) {
         console.log('::: updIrLinkCode() Success');
         await sql`UPDATE user_ir_cust_mappings SET is_verified = 1 WHERE id = ${userLink.id}`;
+        notifyDbWrite('db-user-cfg', 'irCustMapping', [user_id], 'update');
     } else {
         console.log('::: updIrLinkCode() Fail');
         const try_count = 1 + (userLink?.try_count || 0);
         if (userLink) {
             await sql`UPDATE user_ir_cust_mappings SET try_count = ${try_count} WHERE id = ${userLink.id}`;
+            notifyDbWrite('db-user-cfg', 'irCustMapping', [user_id], 'update');
         }
     }
 
@@ -187,6 +192,8 @@ async function updUserLeaguesState(
         };
 
         await sql(insertStmt, []);
+
+        notifyDbWrite('db-user-cfg', 'leaguesInterest', [user_id], 'update');
     }
 
     return await getUserLeaguesState(user_id);
