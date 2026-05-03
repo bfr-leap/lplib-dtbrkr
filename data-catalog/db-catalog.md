@@ -22,12 +22,12 @@ rather than a file path.
 | [`db-app-cfg`](#db-app-cfg) | Global / cross-league config | `journalists`, `tracks`, `app_features` |
 | [`db-tracktalk`](#db-tracktalk) | TrackTalk subscription and publication state | `tracktalk_subscriptions`, `tracktalk_publications`, `tracktalk_dotd_publications` |
 | [`db-steward`](#db-steward) | Steward subsystem config | `steward_config` |
+| [`db-msgingest`](#db-msgingest) | Raw message ingest activity (shared substrate) | `tracktalk_raw_message_ingest` |
 
-The following tables are intentionally **not** published:
+The following columns are intentionally **not** included in any published entity:
 
-| Table | Reason |
-|-------|--------|
-| `tracktalk_raw_message_ingest` | High-volume append-only audit log; no consumer benefit |
+| Column | Reason |
+|--------|--------|
 | `user_ir_cust_mappings.verify_code` | Secret. The entity event is published, but consumers must re-read non-secret fields only |
 
 ---
@@ -168,6 +168,35 @@ Steward subsystem configuration.
 | Entity | Path | Keys | Update Types | Backing Tables |
 |--------|------|------|--------------|----------------|
 | `stewardConfig` | `stewardConfig/<league_id>` | `league_id` | `insert`, `update`, `delete` | `steward_config` |
+
+---
+
+### `db-msgingest`
+
+Raw Discord message ingest. This is a shared substrate used by multiple
+subsystems (steward tagging, TrackTalk publication, future channel-scoped
+features), so it lives in its own namespace rather than under any one
+consumer.
+
+| Entity | Path | Keys | Update Types | Backing Tables |
+|--------|------|------|--------------|----------------|
+| `rawMessage` | `rawMessage/<channel_id>` | `channel_id` | `update` | `tracktalk_raw_message_ingest` |
+
+Notes:
+- The entity is the **channel's message stream**, not an individual message
+  row. One `update` is emitted per ingested message (or per ingest batch on
+  the same channel), and bursts on the same channel may coalesce from the
+  consumer's perspective.
+- Consumers maintain a per-channel watermark of the last processed
+  `tracktalk_raw_message_ingest.id` and, on each event, re-read rows for
+  that `channel_id` newer than the watermark.
+- `channel_id` (Discord snowflake string) appears in the path so consumers
+  can filter without re-reading the row — useful because the dispatch
+  decision (e.g. "is this a steward race-control channel?") is purely
+  channel-scoped.
+- The entity emits `update` only because, per the catalog's set-valued
+  entity convention, individual row inserts inside a set are not separately
+  visible.
 
 ---
 
