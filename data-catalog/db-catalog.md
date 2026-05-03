@@ -89,7 +89,7 @@ preferences, feature opt-ins). Keyed by `user_id` (Discord snowflake string).
 | `irCustMapping` | `irCustMapping/<user_id>` | `user_id` | `insert`, `update`, `delete` | `user_ir_cust_mappings` |
 | `leaguesInterest` | `leaguesInterest/<user_id>` | `user_id` | `update` | `users_leagues_interest` |
 | `appFeaturesEnrollment` | `appFeaturesEnrollment/<user_id>` | `user_id` | `update` | `users_app_features` |
-| `discordIdentity` | `discordIdentity/<user_id>/<guild_id>` | `user_id`, `guild_id` | `insert`, `update`, `delete` | `discord_user_mappings` |
+| `discordIdentity` | `discordIdentity/<user_id>` | `user_id` | `update` | `discord_user_mappings` |
 
 Notes:
 - `irCustMapping` covers verification flow transitions. The entity event is
@@ -98,6 +98,8 @@ Notes:
   verification has progressed.
 - `leaguesInterest` is a set; emit one `update` per use-case call regardless
   of how many league rows are added or removed.
+- `discordIdentity` is a set across guilds; emit one `update` per use-case
+  call regardless of how many guilds are touched.
 
 ---
 
@@ -112,14 +114,14 @@ sub-keyed by `season_id` or another id.
 | `journalistAssignment` | `journalistAssignment/<league_id>` | `league_id` | `update` | `journalists_leagues` |
 | `season` | `season/<league_id>/<season_id>` | `league_id`, `season_id` | `insert`, `update`, `delete` | `seasons` |
 | `schedSubsessions` | `schedSubsessions/<league_id>/<season_id>` | `league_id`, `season_id` | `update` | `sched_subsessions` |
-| `team` | `team/<league_id>/<season_id>/<team_id>` | `league_id`, `season_id`, `team_id` | `insert`, `update`, `delete` | `teams`, `teams_users` |
+| `team` | `team/<league_id>/<season_id>` | `league_id`, `season_id` | `update` | `teams`, `teams_users` |
 
 Notes:
 - `journalistAssignment` is a set of journalists per league; emit one `update`
   for the league's full assignment list, not per-row.
-- `team` rolls up the team row and its membership rows (`teams_users`) under
-  one entity. If membership changes for a team, emit an `update` on that
-  team's path.
+- `team` rolls up all teams (and their membership rows in `teams_users`) for
+  a given league/season under one entity. Adding, removing, or modifying any
+  team — or its members — emits one `update` for the season.
 - `seasons.is_active` toggles emit `update` on `season/<league_id>/<season_id>`.
 
 ---
@@ -149,15 +151,18 @@ State owned by the TrackTalk subsystem.
 
 | Entity | Path | Keys | Update Types | Backing Tables |
 |--------|------|------|--------------|----------------|
-| `subscription` | `subscription/<league_id>/<channel_id>` | `league_id`, `channel_id` | `insert`, `delete` | `tracktalk_subscriptions` |
-| `publication` | `publication/<subsession_id>/<channel_id>` | `subsession_id`, `channel_id` | `insert`, `delete` | `tracktalk_publications` |
-| `dotdPublication` | `dotdPublication/<subsession_id>/<cust_id>/<channel_id>` | `subsession_id`, `cust_id`, `channel_id` | `insert`, `delete` | `tracktalk_dotd_publications` |
+| `subscription` | `subscription/<league_id>` | `league_id` | `update` | `tracktalk_subscriptions` |
+| `publication` | `publication/<subsession_id>` | `subsession_id` | `update` | `tracktalk_publications` |
+| `dotdPublication` | `dotdPublication/<subsession_id>/<cust_id>` | `subsession_id`, `cust_id` | `update` | `tracktalk_dotd_publications` |
 
 Notes:
-- These are set-membership rows. We model each row as its own entity (rather
-  than rolling up to a parent set) because consumers need fine-grained
-  visibility into individual subscriptions/publications.
-- `update` is unused; subscriptions and publications either exist or don't.
+- All three entities are set-valued: the leaf `channel_id` is rolled up so a
+  league's full subscription set, a subsession's full publication set, and
+  a (subsession, cust) pair's full dotd publication set are each modeled
+  as one entity.
+- Emit one `update` per use-case call regardless of how many channels are
+  added or removed in that call. Consumers re-read the relevant rows to see
+  the new membership.
 
 ---
 
