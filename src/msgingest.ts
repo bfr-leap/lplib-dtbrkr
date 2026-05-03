@@ -1,5 +1,6 @@
 import type { TracktalkRawMessage } from 'ir-endpoint-types';
 import { sql } from './db';
+import { notifyDbWrite } from './db-kafka-notify';
 
 export async function createRawMessageIngest(msg: {
     contents: string;
@@ -15,6 +16,8 @@ export async function createRawMessageIngest(msg: {
         (contents, author_id, author_username, author_global_name, guild_id, channel_id, channel_name)
         VALUES (${msg.contents}, ${msg.author_id}, ${msg.author_username},
                 ${msg.author_global_name}, ${msg.guild_id}, ${msg.channel_id}, ${msg.channel_name})`;
+
+    notifyDbWrite('db-msgingest', 'rawMessage', [msg.channel_id], 'update');
 }
 
 export async function loadUserIdsForChannel(
@@ -68,6 +71,13 @@ export async function upsertDiscordUserMapping(mapping: {
             display_name = ${mapping.display_name},
             username = ${mapping.username},
             updated_at = datetime('now')`;
+
+    notifyDbWrite(
+        'db-user-cfg',
+        'discordIdentity',
+        [mapping.user_id],
+        'update'
+    );
 }
 
 export async function loadDiscordUserMappings(
