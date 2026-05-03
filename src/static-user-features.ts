@@ -25,11 +25,20 @@ export const USER_FEATURES = {
             release_to_all: true,
             release_to_some: true,
         },
+        {
+            display_name: 'global_admin',
+            release_to_all: false,
+            release_to_some: true,
+        },
     ],
     usersAppFeatures: [
         {
             user_id: 'user_2iLpmemWDB0Q0lnePYRHo95hp4W',
             feature_name: 'league_cdr_admin',
+        },
+        {
+            user_id: 'user_2iLpmemWDB0Q0lnePYRHo95hp4W',
+            feature_name: 'global_admin',
         },
         {
             user_id: 'user_2iLpmemWDB0Q0lnePYRHo95hp4W',
@@ -61,6 +70,7 @@ export const USER_FEATURES = {
             'fully_released_feature',
             'fully_released_feature_2',
             'fully_released_feature_3',
+            'global_admin',
             'league_cdr_admin',
         ],
         user_unlisted: [

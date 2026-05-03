@@ -14,9 +14,26 @@ export {
     loadDiscordUserMappings,
     getGuildIdForChannel,
 } from './msgingest';
-export { createPublication, isSubsessionPublished, createDotdPublication, isDotdPublished } from './publications';
+export {
+    createPublication,
+    isSubsessionPublished,
+    createDotdPublication,
+    isDotdPublished,
+} from './publications';
 
 export { adminConfigHandler } from './admcfg';
+
+export {
+    crudHandler,
+    listRows,
+    getRow,
+    createRow,
+    updateRow,
+    deleteRow,
+    listTables,
+    describeTable,
+    TABLE_REGISTRY,
+} from './crud';
 
 export {
     getAllRulings,
