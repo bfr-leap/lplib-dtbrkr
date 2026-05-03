@@ -2,7 +2,7 @@ import { Kafka, type Producer } from 'kafkajs';
 
 const BROKER = 'leap-relay1:9092';
 const CLIENT_ID = 'lplib-ldloadutl';
-const TOPIC = 'db-update-log';
+const TOPIC = 'ldata-update-log';
 const SOURCE = 'lplib-ldloadutl';
 const STREAM_SUFFIX = ':strm';
 
