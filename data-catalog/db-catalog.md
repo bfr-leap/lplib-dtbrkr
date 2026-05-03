@@ -34,7 +34,7 @@ The following columns are intentionally **not** included in any published entity
 
 ## Envelope
 
-DB messages are JSON values on the topic `db-update-log`, using the same
+DB messages are JSON values on the topic `ldata-update-log`, using the same
 envelope as [`ldata-update-log`](data-catalog.md):
 
 ```jsonc

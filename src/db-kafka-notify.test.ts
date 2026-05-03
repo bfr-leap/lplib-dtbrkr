@@ -34,7 +34,7 @@ describe('notifyDbWrite', () => {
         logSpy.mockRestore();
     });
 
-    it('sends a DbUpdateLogEntry to db-update-log with :strm suffix', async () => {
+    it('sends a DbUpdateLogEntry to ldata-update-log with :strm suffix', async () => {
         const { notifyDbWrite } = require('./db-kafka-notify');
         const { send } = kafkaMocks();
 
@@ -48,7 +48,7 @@ describe('notifyDbWrite', () => {
 
         expect(send).toHaveBeenCalledTimes(1);
         const call = send.mock.calls[0][0];
-        expect(call.topic).toBe('db-update-log');
+        expect(call.topic).toBe('ldata-update-log');
         expect(call.messages).toHaveLength(1);
         expect(call.messages[0].key).toBeUndefined();
 
