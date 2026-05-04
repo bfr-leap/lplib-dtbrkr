@@ -1,5 +1,5 @@
 import { userFeatures } from './usrdata';
-import { USER_FEATURES } from './static-user-features';
+import { USER_FEATURES } from '../test/test-user-features-data';
 
 describe('user-features', () => {
     test('Retrieve Listed User Features from DB', async () => {
