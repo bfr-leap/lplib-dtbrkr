@@ -1,4 +1,3 @@
-import { isDeepStrictEqual } from 'util';
 import {
     getBlockedSeasonsAsync,
     getLapChartDataAsync,
@@ -32,8 +31,8 @@ import { getTelemetrySubsessionsAsync } from './ldata-loaders/ldata-irrpy-data-l
 // requested (namespace, type). Distinct from a loader returning `null`, which
 // means "loader exists, no data on disk for this query." Surfacing the
 // difference at runtime lets `getDocument` log uncatalogued endpoints with a
-// dedicated `UNHANDLED` warning rather than silently treating them as
-// shadow-mode divergence.
+// dedicated `UNHANDLED` warning and return null rather than silently serving
+// nothing.
 export const UNHANDLED = Symbol('dataLake.unhandled');
 
 type Query = { [name: string]: string | number };
@@ -45,51 +44,9 @@ function num(v: string | number | undefined): number | null {
 }
 
 // ---------------------------------------------------------------------------
-// Legacy URL fetch — preserved verbatim during the shadow-mode rollout so the
-// caller sees byte-for-byte identical data while we observe loader parity in
-// production. Delete this branch (and switch `getDocument` to return the
-// loader result) once divergence logs are clean.
-// ---------------------------------------------------------------------------
-
-const URL_BASE = 'https://arturo-mayorga.github.io/irl_stats/dist/data';
-
-function ldArg(arg: string | number | undefined): string {
-    return arg ? '/' + arg : '';
-}
-
-function nNums(s: string): string {
-    return s.replace('-', 'n');
-}
-
-function legacyUrl(query: Query): string {
-    return (
-        `${URL_BASE}/${query.namespace}/${query.type}` +
-        `${ldArg(query.league)}` +
-        `${ldArg(query.season)}` +
-        `${ldArg(query.subsession)}` +
-        `${nNums(ldArg(query.simsession))}` +
-        `${ldArg(query.driver)}` +
-        `${ldArg(query.car)}` +
-        `${ldArg(query.track)}` +
-        `${ldArg(query.sessionType)}` +
-        `${ldArg(query.custId)}` +
-        `.json`
-    );
-}
-
-export async function getFromUrl(query: Query): Promise<any> {
-    try {
-        const res = await fetch(legacyUrl(query));
-        return await res.json();
-    } catch {
-        return null;
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Loader-backed dispatch — routes (namespace, type) to the typed loader for
-// that dataset. Exported for tests and the parity script; not re-exported
-// from src/index.ts (the public surface is `getDocument` only).
+// that dataset. Exported for tests; not re-exported from src/index.ts (the
+// public surface is `getDocument` only).
 // ---------------------------------------------------------------------------
 
 export async function getFromLoader(
@@ -245,55 +202,6 @@ export async function getFromLoader(
     return UNHANDLED;
 }
 
-// ---------------------------------------------------------------------------
-// Shadow-mode dispatcher
-// ---------------------------------------------------------------------------
-// Runs both sources in parallel, picks one to return, and logs any
-// divergence for ops. Loader-side exceptions are swallowed — a bug in the
-// loader path must never affect what the caller receives.
-//
-// Resolution rule:
-//   * If exactly one source is null, return the non-null one (the other
-//     source filling the gap is the whole point of running both).
-//   * If both are non-null, return the URL value by default. Flip
-//     `PREFER_LOADER` to `true` once the loader has proven parity with the
-//     URL across all manifest endpoints; that switches the dispatcher to
-//     prefer loader data and effectively retires the legacy URL path.
-//   * If both are null, return null.
-//
-// Divergence is still logged in every disagreement case, regardless of
-// which value was returned, so ops always see when sources disagree.
-// ---------------------------------------------------------------------------
-
-const PREFER_LOADER = false;
-
-function logDivergence(
-    query: Query,
-    urlData: any,
-    loaderData: any,
-    returned: 'url' | 'loader'
-): void {
-    const ns = String(query.namespace ?? '');
-    const type = String(query.type ?? '');
-    const keys = Object.entries(query)
-        .filter(([k]) => k !== 'namespace' && k !== 'type')
-        .map(([k, v]) => `${k}=${v}`)
-        .join(' ');
-
-    let detail: string;
-    if (urlData === null && loaderData !== null) {
-        detail = 'url=null loader=non-null';
-    } else if (urlData !== null && loaderData === null) {
-        detail = 'url=non-null loader=null';
-    } else {
-        detail = 'shape/value mismatch';
-    }
-
-    console.warn(
-        `:: dataLake DIVERGENCE [${ns}/${type}] ${keys} (${detail} returned=${returned})`
-    );
-}
-
 function logUnhandled(query: Query): void {
     const ns = String(query.namespace ?? '');
     const type = String(query.type ?? '');
@@ -309,35 +217,11 @@ export async function getDocument(query: Query): Promise<any> {
     const type = String(query.type ?? '');
     console.log(`:: dataLake: ${ns}/${type}`);
 
-    const [urlData, loaderData] = await Promise.all([
-        getFromUrl(query),
-        getFromLoader(query).catch(() => null),
-    ]);
+    const result = await getFromLoader(query);
 
-    if (loaderData === UNHANDLED) {
+    if (result === UNHANDLED) {
         logUnhandled(query);
-        return urlData;
-    }
-
-    // Resolve which value to return.
-    let returned: 'url' | 'loader';
-    let result: any;
-    if (urlData !== null && loaderData !== null) {
-        returned = PREFER_LOADER ? 'loader' : 'url';
-        result = PREFER_LOADER ? loaderData : urlData;
-    } else if (urlData !== null) {
-        returned = 'url';
-        result = urlData;
-    } else if (loaderData !== null) {
-        returned = 'loader';
-        result = loaderData;
-    } else {
-        returned = 'url';
-        result = null;
-    }
-
-    if (!isDeepStrictEqual(urlData, loaderData)) {
-        logDivergence(query, urlData, loaderData, returned);
+        return null;
     }
 
     return result;
