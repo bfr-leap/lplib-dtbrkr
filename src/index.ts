@@ -220,3 +220,15 @@ export {
     getStewardRulingsBySeasonAsync,
     getStewardRulingsByDriverAsync,
 } from './ldata-loaders/ldata-stward-data-loader';
+
+export {
+    listWinnerCaptures,
+    getWinnerCaptureForSubsession,
+    getLatestWinnerCaptureForDriver,
+    readWinnerCaptureBytes,
+    listWinnerCapturesAsync,
+    getWinnerCaptureForSubsessionAsync,
+    getLatestWinnerCaptureForDriverAsync,
+    readWinnerCaptureBytesAsync,
+} from './ldata-loaders/ldata-trkcam-data-loader';
+export type { WinnerCapture } from './ldata-loaders/ldata-trkcam-data-loader';
