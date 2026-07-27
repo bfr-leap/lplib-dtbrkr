@@ -221,11 +221,9 @@ export {
     getStewardRulingsByDriverAsync,
 } from './ldata-loaders/ldata-stward-data-loader';
 
+// Async only — captures are multi-megabyte PNGs served on a request path,
+// so this loader deliberately ships no sync half. See the module header.
 export {
-    listWinnerCaptures,
-    getWinnerCaptureForSubsession,
-    getLatestWinnerCaptureForDriver,
-    readWinnerCaptureBytes,
     listWinnerCapturesAsync,
     getWinnerCaptureForSubsessionAsync,
     getLatestWinnerCaptureForDriverAsync,

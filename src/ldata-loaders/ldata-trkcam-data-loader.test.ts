@@ -1,16 +1,12 @@
 jest.mock('fs');
 jest.mock('fs/promises');
 
-import { existsSync, readdirSync, readFileSync } from 'fs';
+import * as fs from 'fs';
 import { readdir, readFile, stat } from 'fs/promises';
 import {
-    listWinnerCaptures,
     listWinnerCapturesAsync,
-    getWinnerCaptureForSubsession,
     getWinnerCaptureForSubsessionAsync,
-    getLatestWinnerCaptureForDriver,
     getLatestWinnerCaptureForDriverAsync,
-    readWinnerCaptureBytes,
     readWinnerCaptureBytesAsync,
 } from './ldata-trkcam-data-loader';
 
@@ -42,14 +38,11 @@ const LISTING = [
 ];
 
 function mountListing(entries: Dirent[]) {
-    (existsSync as jest.Mock).mockReturnValue(true);
-    (readdirSync as jest.Mock).mockReturnValue(entries);
     (stat as jest.Mock).mockResolvedValue({});
     (readdir as jest.Mock).mockResolvedValue(entries);
 }
 
 function mountMissing() {
-    (existsSync as jest.Mock).mockReturnValue(false);
     (stat as jest.Mock).mockRejectedValue(new Error('ENOENT'));
 }
 
@@ -58,9 +51,53 @@ beforeEach(() => {
     mountListing(LISTING);
 });
 
-describe('listWinnerCaptures', () => {
-    it('decodes every capture from its filename', () => {
-        expect(listWinnerCaptures()).toEqual([
+// The service reads these on its request path, so a sync fs call anywhere in
+// the loader would block the event loop on a multi-megabyte PNG. Guard the
+// whole module surface rather than trusting review to catch a regression.
+describe('no synchronous filesystem access', () => {
+    const SYNC_FNS = [
+        'readFileSync',
+        'readdirSync',
+        'existsSync',
+        'statSync',
+        'openSync',
+        'accessSync',
+    ] as const;
+
+    it('never calls a sync fs function on any code path', async () => {
+        (readFile as jest.Mock).mockResolvedValue(Buffer.from([0x89]));
+
+        await listWinnerCapturesAsync();
+        await getWinnerCaptureForSubsessionAsync(87426864);
+        await getLatestWinnerCaptureForDriverAsync(532988);
+        await readWinnerCaptureBytesAsync('87426864_418074_555362.png');
+
+        mountMissing();
+        await listWinnerCapturesAsync();
+        await getWinnerCaptureForSubsessionAsync(87426864);
+        await getLatestWinnerCaptureForDriverAsync(532988);
+        await readWinnerCaptureBytesAsync('nope');
+
+        for (const name of SYNC_FNS) {
+            expect((fs as any)[name]).not.toHaveBeenCalled();
+        }
+    });
+
+    it('exports no sync variants', () => {
+        const mod = require('./ldata-trkcam-data-loader');
+        const exported = Object.keys(mod).filter(
+            (k) => typeof mod[k] === 'function'
+        );
+        expect(exported.length).toBeGreaterThan(0);
+        for (const name of exported) {
+            expect(name).toMatch(/Async$/);
+        }
+    });
+});
+
+describe('listWinnerCapturesAsync', () => {
+    it('decodes every capture from its filename', async () => {
+        await expect(listWinnerCapturesAsync()).resolves.toEqual([
             {
                 subsession_id: 87426864,
                 finish_frame: 239914,
@@ -80,12 +117,10 @@ describe('listWinnerCaptures', () => {
                 file: '85056343_101_532988.png',
             },
         ]);
-        expect(readdirSync).toHaveBeenCalledWith(WINNERS, {
-            withFileTypes: true,
-        });
+        expect(readdir).toHaveBeenCalledWith(WINNERS, { withFileTypes: true });
     });
 
-    it('skips entries that are not capture filenames', () => {
+    it('skips entries that are not capture filenames', async () => {
         mountListing([
             file('README.md'),
             file('.gitkeep'),
@@ -95,97 +130,63 @@ describe('listWinnerCaptures', () => {
             dir('87426864_418074_555362.png'),
             file('87426864_418074_555362.png'),
         ]);
-        expect(listWinnerCaptures().map((c) => c.file)).toEqual([
+        const captures = await listWinnerCapturesAsync();
+        expect(captures.map((c) => c.file)).toEqual([
             '87426864_418074_555362.png',
         ]);
     });
 
-    it('returns an empty array when the dataset is not mounted', () => {
+    it('returns an empty array when the dataset is not mounted', async () => {
         mountMissing();
-        expect(listWinnerCaptures()).toEqual([]);
-        expect(readdirSync).not.toHaveBeenCalled();
+        await expect(listWinnerCapturesAsync()).resolves.toEqual([]);
+        expect(readdir).not.toHaveBeenCalled();
     });
 });
 
-describe('getWinnerCaptureForSubsession', () => {
-    it('picks the highest finish frame within the subsession', () => {
-        expect(getWinnerCaptureForSubsession(87426864)?.file).toBe(
-            '87426864_418074_555362.png'
-        );
+describe('getWinnerCaptureForSubsessionAsync', () => {
+    it('picks the highest finish frame within the subsession', async () => {
+        const capture = await getWinnerCaptureForSubsessionAsync(87426864);
+        expect(capture?.file).toBe('87426864_418074_555362.png');
     });
 
-    it('returns null for a subsession with no capture', () => {
-        expect(getWinnerCaptureForSubsession(1)).toBeNull();
+    it('returns null for a subsession with no capture', async () => {
+        await expect(getWinnerCaptureForSubsessionAsync(1)).resolves.toBeNull();
     });
 
-    it('returns null when the dataset is not mounted', () => {
+    it('returns null when the dataset is not mounted', async () => {
         mountMissing();
-        expect(getWinnerCaptureForSubsession(87426864)).toBeNull();
+        await expect(
+            getWinnerCaptureForSubsessionAsync(87426864)
+        ).resolves.toBeNull();
     });
 });
 
-describe('getLatestWinnerCaptureForDriver', () => {
-    it('picks the highest subsession the driver won', () => {
-        expect(getLatestWinnerCaptureForDriver(532988)?.file).toBe(
-            '87426864_239914_532988.png'
-        );
+describe('getLatestWinnerCaptureForDriverAsync', () => {
+    it('picks the highest subsession the driver won', async () => {
+        const capture = await getLatestWinnerCaptureForDriverAsync(532988);
+        expect(capture?.file).toBe('87426864_239914_532988.png');
     });
 
-    it('breaks ties within a subsession on the highest finish frame', () => {
+    it('breaks ties within a subsession on the highest finish frame', async () => {
         mountListing([
             file('87426864_239914_777000.png'),
             file('87426864_418074_777000.png'),
         ]);
-        expect(getLatestWinnerCaptureForDriver(777000)?.file).toBe(
-            '87426864_418074_777000.png'
-        );
+        const capture = await getLatestWinnerCaptureForDriverAsync(777000);
+        expect(capture?.file).toBe('87426864_418074_777000.png');
     });
 
-    it('returns null for a driver with no capture', () => {
-        expect(getLatestWinnerCaptureForDriver(999999)).toBeNull();
-    });
-});
-
-describe('readWinnerCaptureBytes', () => {
-    it('reads the file as raw bytes, with no encoding', () => {
-        const png = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
-        (readFileSync as jest.Mock).mockReturnValue(png);
-
-        expect(readWinnerCaptureBytes('87426864_418074_555362.png')).toBe(png);
-        expect(readFileSync).toHaveBeenCalledWith(
-            `${WINNERS}/87426864_418074_555362.png`
-        );
-    });
-
-    it('returns null when the file is missing', () => {
-        (readFileSync as jest.Mock).mockImplementation(() => {
-            throw new Error('ENOENT');
-        });
-        expect(readWinnerCaptureBytes('87426864_418074_555362.png')).toBeNull();
-    });
-
-    it('rejects names that are not capture filenames without touching fs', () => {
-        expect(readWinnerCaptureBytes('../../../etc/passwd')).toBeNull();
-        expect(readWinnerCaptureBytes('winners/../../secret.png')).toBeNull();
-        expect(readWinnerCaptureBytes('')).toBeNull();
-        expect(readFileSync).not.toHaveBeenCalled();
+    it('returns null for a driver with no capture', async () => {
+        await expect(
+            getLatestWinnerCaptureForDriverAsync(999999)
+        ).resolves.toBeNull();
     });
 });
 
-describe('async accessors', () => {
-    it('list, select and read through fs/promises', async () => {
+describe('readWinnerCaptureBytesAsync', () => {
+    it('reads the file as raw bytes, with no encoding', async () => {
         const png = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
         (readFile as jest.Mock).mockResolvedValue(png);
-
-        expect((await listWinnerCapturesAsync()).length).toBe(3);
-        expect(readdir).toHaveBeenCalledWith(WINNERS, { withFileTypes: true });
-
-        expect((await getWinnerCaptureForSubsessionAsync(87426864))?.file).toBe(
-            '87426864_418074_555362.png'
-        );
-        expect((await getLatestWinnerCaptureForDriverAsync(532988))?.file).toBe(
-            '87426864_239914_532988.png'
-        );
 
         await expect(
             readWinnerCaptureBytesAsync('87426864_418074_555362.png')
@@ -195,27 +196,21 @@ describe('async accessors', () => {
         );
     });
 
-    it('returns empty/null when the dataset is not mounted', async () => {
-        mountMissing();
-        await expect(listWinnerCapturesAsync()).resolves.toEqual([]);
-        await expect(
-            getWinnerCaptureForSubsessionAsync(87426864)
-        ).resolves.toBeNull();
-        await expect(
-            getLatestWinnerCaptureForDriverAsync(532988)
-        ).resolves.toBeNull();
-        expect(readdir).not.toHaveBeenCalled();
-    });
-
-    it('returns null on an unreadable file and on a bad name', async () => {
+    it('returns null when the file is missing', async () => {
         (readFile as jest.Mock).mockRejectedValue(new Error('ENOENT'));
         await expect(
             readWinnerCaptureBytesAsync('87426864_418074_555362.png')
         ).resolves.toBeNull();
+    });
 
+    it('rejects names that are not capture filenames without touching fs', async () => {
         await expect(
             readWinnerCaptureBytesAsync('../../../etc/passwd')
         ).resolves.toBeNull();
-        expect(readFile).toHaveBeenCalledTimes(1);
+        await expect(
+            readWinnerCaptureBytesAsync('winners/../../secret.png')
+        ).resolves.toBeNull();
+        await expect(readWinnerCaptureBytesAsync('')).resolves.toBeNull();
+        expect(readFile).not.toHaveBeenCalled();
     });
 });

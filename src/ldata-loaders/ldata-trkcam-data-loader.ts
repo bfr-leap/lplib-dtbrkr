@@ -14,9 +14,14 @@
  * so listing the directory is enough to index it — there is no manifest file.
  * This dataset is producer-written; there is no write path here.
  *
+ * Async only, deliberately. The other loaders in this library expose sync
+ * and async pairs, but captures are multi-megabyte PNGs read on the request
+ * path of `wbsvc-dtbrkrrd` — a sync read there would block the event loop
+ * for the whole file. Not offering the sync half means it cannot be reached
+ * by mistake.
+ *
  */
 
-import { existsSync, readdirSync, readFileSync } from 'fs';
 import { readdir, readFile, stat } from 'fs/promises';
 
 // TODO(upstream): move this interface to `ir-endpoint-types`. Mirrors the
@@ -43,13 +48,6 @@ const FILE_RE = /^(\d+)_(\d+)_(\d+)\.png$/;
  * Every winner capture in the dataset, indexed straight off the filenames.
  * Returns an empty array if the dataset isn't mounted yet.
  */
-export function listWinnerCaptures(): WinnerCapture[] {
-    if (!existsSync(WINNERS_DIR)) {
-        return [];
-    }
-    return parseEntries(readdirSync(WINNERS_DIR, { withFileTypes: true }));
-}
-
 export async function listWinnerCapturesAsync(): Promise<WinnerCapture[]> {
     if (!(await pathExistsAsync(WINNERS_DIR))) {
         return [];
@@ -62,12 +60,6 @@ export async function listWinnerCapturesAsync(): Promise<WinnerCapture[]> {
  * race session (e.g. a heat plus a feature), so the capture with the highest
  * finish frame — the last line crossing of the subsession — wins.
  */
-export function getWinnerCaptureForSubsession(
-    subsessionId: number
-): WinnerCapture | null {
-    return pickForSubsession(listWinnerCaptures(), subsessionId);
-}
-
 export async function getWinnerCaptureForSubsessionAsync(
     subsessionId: number
 ): Promise<WinnerCapture | null> {
@@ -79,12 +71,6 @@ export async function getWinnerCaptureForSubsessionAsync(
  * increase over time, so the highest one is the latest race; ties (a driver
  * winning twice inside one subsession) fall back to the highest finish frame.
  */
-export function getLatestWinnerCaptureForDriver(
-    userId: number
-): WinnerCapture | null {
-    return pickLatestForDriver(listWinnerCaptures(), userId);
-}
-
 export async function getLatestWinnerCaptureForDriverAsync(
     userId: number
 ): Promise<WinnerCapture | null> {
@@ -95,17 +81,6 @@ export async function getLatestWinnerCaptureForDriverAsync(
  * Raw PNG bytes for a capture, addressed by basename. Returns null if the
  * name isn't a well-formed capture filename or the file can't be read.
  */
-export function readWinnerCaptureBytes(file: string): Buffer | null {
-    if (!FILE_RE.test(file)) {
-        return null;
-    }
-    try {
-        return readFileSync(`${WINNERS_DIR}/${file}`);
-    } catch (e) {
-        return null;
-    }
-}
-
 export async function readWinnerCaptureBytesAsync(
     file: string
 ): Promise<Buffer | null> {
