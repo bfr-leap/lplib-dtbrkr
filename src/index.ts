@@ -230,5 +230,19 @@ export {
     getWinnerCaptureForSubsessionAsync,
     getLatestWinnerCaptureForDriverAsync,
     readWinnerCaptureBytesAsync,
+    HIGHLIGHT_CATEGORIES,
+    isHighlightCategory,
+    listHighlightCaptures,
+    getHighlightCapturesForSubsession,
+    getHighlightCapturesForDriver,
+    readHighlightCaptureBytes,
+    listHighlightCapturesAsync,
+    getHighlightCapturesForSubsessionAsync,
+    getHighlightCapturesForDriverAsync,
+    readHighlightCaptureBytesAsync,
 } from './ldata-loaders/ldata-trkcam-data-loader';
-export type { WinnerCapture } from './ldata-loaders/ldata-trkcam-data-loader';
+export type {
+    WinnerCapture,
+    HighlightCapture,
+    HighlightCategory,
+} from './ldata-loaders/ldata-trkcam-data-loader';
