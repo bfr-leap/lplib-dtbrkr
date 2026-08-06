@@ -15,6 +15,7 @@ This document provides a comprehensive catalog of the data producers and dataset
 | Dataset | Description | Producer | Dependencies |
 |---------|-------------|----------|--------------|
 | [`ldata-irweb`](#ldata-irweb) | iRacing Web API downloads | `dprdc-irweb` | iRacing data web API |
+| [`ldata-srhweb`](#ldata-srhweb) | simracerhub standings, results, penalties | `dprdc-srhweb` | simracerhub.com web scrape, `ldata-irweb` |
 | [`ldata-irrpy`](#ldata-irrpy) | Raw telemetry from live sessions | `dprdc-irrpy` | Live scraping during race sessions |
 | [`ldata-xftelem`](#ldata-xftelem) | Packaged telemetry data | `dprdc-xftelem` | `ldata-irrpy` |
 | [`ldata-rsltsts`](#ldata-rsltsts) | Processed results, driver stats, track records | `dprdc-rsltsts` | `ldata-irweb`, `dprdc-xftelem` |
@@ -30,6 +31,9 @@ This document provides a comprehensive catalog of the data producers and dataset
 graph LR
     API["iRacing Web API"] --> irweb["ldata-irweb"]
     LT["Live Telemetry"] --> irrpy["ldata-irrpy"]
+
+    SRH["simracerhub.com"] --> srhweb["ldata-srhweb"]
+    irweb --> srhweb
 
     irweb --> rsltsts["ldata-rsltsts"]
     irrpy --> xftelem["ldata-xftelem"]
@@ -48,6 +52,7 @@ graph LR
 
     style API fill:#f9f,stroke:#333
     style LT fill:#f9f,stroke:#333
+    style SRH fill:#f9f,stroke:#333
     style usrcfg fill:#eee,stroke:#999,stroke-dasharray: 5 5
 ```
 
@@ -88,6 +93,82 @@ Contains downloads from the iRacing data web API, including lap chart data, leag
 | `leagueSeasonSessions/` | Session schedules, weather, winners | `{league_id}/{season_id}.json` | `sessions[]`: track, weather, launch_at, winner info |
 | `membersData/` | Driver profiles with ratings & licenses | `{league_id}/{season_id}.json` | `members[]`: `cust_id`, `display_name`, licenses by discipline, `irating` |
 | `blockedSeasons.json` | Seasons excluded from processing (keyless) | `blockedSeasons.json` | `{league_season_key}`: boolean, `min_season_id` |
+
+---
+
+### `ldata-srhweb`
+
+**Path:** `dist/data/ldata-srhweb/`
+**Populated by:** `dprdc-srhweb`
+**Dependencies:** simracerhub.com (public pages; no API), `ldata-irweb`
+
+League championship data scraped from simracerhub.com, a third-party scoring
+site used by leagues that score outside iRacing. Covers season standings, per
+session race results, and the stewarding penalties and bonuses behind them.
+
+simracerhub exposes no API and the site owners do not intend to build one, so
+`dprdc-srhweb` reads their React page payloads and adapts them. Nothing here
+carries simracerhub's own field names or units — see that repo's
+`srhub-adapter.ts` for the mapping.
+
+Joins to `ldata-irweb` and `ldata-rsltsts` directly — same identifiers, no
+translation. Lap times are 10,000ths of a second, matching `ldata-rsltsts`.
+AI drivers have no iRacing identity and are not carried.
+
+#### Subdirectories
+
+| Directory | Description | File Pattern | Key Fields |
+|-----------|-------------|--------------|------------|
+| `seasonInfo/` | Season identity, scoring rules, calendar, roster | `{league_id}/{season_id}.json` | `classes[]`, `schedule[]`: `subsession_id`, track, `sessions[]`; `drivers{}` keyed by `cust_id` |
+| `seasonStandings/` | Driver and team championship tables | `{league_id}/{season_id}/{class_id}.json` | `drivers{}` keyed by `cust_id`: `position`, `total_points`, `counted_races[]`, `dropped_races[]`; `teams{}` |
+| `raceResults/` | Per-driver results for one sim session | `{subsession_id}/{simsession_number}.json` | `session_type`, `is_race`, `results{}` keyed by `cust_id`: `position`, points breakdown, lap times |
+| `raceAdjudications/` | Steward points adjustments for one session | `{subsession_id}/{simsession_number}.json` | `penalties[]`, `bonuses[]`: `points`, `description`, `cust_id` |
+
+Keyed entirely in **iRacing** terms — `league_id`, `season_id`,
+`subsession_id`, `simsession_number`, `cust_id` — the same as `ldata-irweb`
+and `ldata-rsltsts`, so no lookup table is needed to join them. simracerhub's
+own identifiers are resolved away by the producer and never persisted.
+
+Field names and units follow `ldata-rsltsts` wherever the two overlap:
+`position`, `start_position`, `laps_completed`, `incidents`,
+`fastest_lap_time` and `avg_lap_time` mean the same thing in both, with lap
+times in 10,000ths of a second and `-1` for an unknown time. One near-miss to
+watch: `num_fast_laps` here is a *count* of laps run at fast-lap pace, while
+`fast_lap` in `ldata-rsltsts` is the lap *number* on which the fastest lap was
+set.
+
+What `ldata-srhweb` adds over `ldata-rsltsts` is the championship layer — the
+points breakdown (`race_points`, `bonus_points`, `penalty_points`,
+`stage_points`, `total_points`) against `rsltsts`'s flat `points`, whether a
+result counted (`counts_toward_standings`, `counts_toward_stats`,
+`is_provisional`), and simracerhub's race-craft analytics (`passes`,
+`quality_passes`, `closing_passes`, `avg_pos`, `avg_running_pos`, `rating`).
+
+#### Sessions, heats, and the iRacing join
+
+simracerhub passes iRacing's `simsession_number` through unchanged, so a
+session here and a session in `ldata-irweb` share half a key. On a heat-racing
+event the two line up exactly:
+
+| `simsession_number` | `ldata-irweb` name | `ldata-srhweb` `session_type` |
+|---|---|---|
+| -4 | `PRACTICE` | `OPEN PRACTICE` |
+| -3 | `QUALIFY` | `OPEN QUALIFYING` |
+| -2 | `HEAT 1` | `RACE` |
+| -1 | `WARMUP` | `OPEN PRACTICE` |
+| 0 | `FEATURE` | `RACE` |
+
+Two consequences worth internalising:
+
+- **A negative session number is not "not a race".** A heat weekend scores two
+  races per event, at -2 and 0, and both count toward the championship. Branch
+  on `is_race` — iRacing's `simsession_type` 6 — never on the session number.
+  `listRacedSessions()` is the accessor that gets this right.
+- **A race can be missing.** simracerhub does not publish `subsession_id`, so
+  the producer resolves it against `ldata-irweb` by track and date. A race
+  simracerhub has scored is absent here until iRacing's copy has been
+  scraped, and appears on a later run — the dataset is never keyed on
+  anything but iRacing identifiers.
 
 ---
 

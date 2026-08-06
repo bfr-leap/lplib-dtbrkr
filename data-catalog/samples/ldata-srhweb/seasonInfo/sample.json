@@ -1,0 +1,119 @@
+{
+  "season_id": 134456,
+  "season_name": "Season 19",
+  "league_id": 4534,
+  "league_name": "League Zero",
+  "series_name": "Formula Series",
+  "drop_weeks": 1,
+  "keep_weeks": 4,
+  "allow_negative_race_points": true,
+  "allow_negative_standings_points": true,
+  "classes": [
+    {
+      "class_id": 0,
+      "class_name": "Overall"
+    }
+  ],
+  "schedule": [
+    {
+      "subsession_id": 86551649,
+      "sessions": [
+        {
+          "simsession_number": -4,
+          "session_type": "OPEN PRACTICE",
+          "is_race": false
+        },
+        {
+          "simsession_number": -3,
+          "session_type": "OPEN QUALIFYING",
+          "is_race": false
+        },
+        {
+          "simsession_number": -2,
+          "session_type": "RACE",
+          "is_race": true
+        },
+        {
+          "simsession_number": -1,
+          "session_type": "OPEN PRACTICE",
+          "is_race": false
+        },
+        {
+          "simsession_number": 0,
+          "session_type": "RACE",
+          "is_race": true
+        }
+      ],
+      "race_date": 1781755200,
+      "track": {
+        "track_id": 103,
+        "config_id": 523,
+        "track_name": "Circuit de Spa-Francorchamps",
+        "config_name": "Grand Prix Pits",
+        "length_km": 4.35,
+        "turns": 19
+      },
+      "event_name": null,
+      "is_chase": false,
+      "can_drop": true,
+      "counts_for_points": true
+    },
+    {
+      "subsession_id": 86727453,
+      "sessions": [
+        {
+          "simsession_number": -4,
+          "session_type": "OPEN PRACTICE",
+          "is_race": false
+        },
+        {
+          "simsession_number": -3,
+          "session_type": "OPEN QUALIFYING",
+          "is_race": false
+        },
+        {
+          "simsession_number": -2,
+          "session_type": "RACE",
+          "is_race": true
+        },
+        {
+          "simsession_number": -1,
+          "session_type": "OPEN PRACTICE",
+          "is_race": false
+        },
+        {
+          "simsession_number": 0,
+          "session_type": "RACE",
+          "is_race": true
+        }
+      ],
+      "race_date": 1782360000,
+      "track": {
+        "track_id": 185,
+        "config_id": 250,
+        "track_name": "N\u00fcrburgring Grand-Prix-Strecke",
+        "config_name": "Grand Prix",
+        "length_km": 3.2,
+        "turns": 16
+      },
+      "event_name": null,
+      "is_chase": false,
+      "can_drop": true,
+      "counts_for_points": true
+    }
+  ],
+  "drivers": {
+    "174470": {
+      "cust_id": 174470,
+      "display_name": "Arturo Mayorga",
+      "sort_name": "Mayorga, Arturo",
+      "country_code": "US"
+    },
+    "201632": {
+      "cust_id": 201632,
+      "display_name": "Shajee Zuhair",
+      "sort_name": "Zuhair, Shajee",
+      "country_code": "LK"
+    }
+  }
+}
