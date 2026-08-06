@@ -1,0 +1,29 @@
+{
+  "subsession_id": 87253846,
+  "simsession_number": -2,
+  "penalties": [
+    {
+      "adjustment_id": 500266,
+      "cust_id": 644931,
+      "class_id": 0,
+      "points": 5,
+      "description": "Major Penalty"
+    }
+  ],
+  "bonuses": [
+    {
+      "adjustment_id": 2658315,
+      "cust_id": 585611,
+      "class_id": 0,
+      "points": 1,
+      "description": "Fastest race lap"
+    },
+    {
+      "adjustment_id": 2658316,
+      "cust_id": 644931,
+      "class_id": 0,
+      "points": 1,
+      "description": "Pole position"
+    }
+  ]
+}
